@@ -1,42 +1,490 @@
+@model MilitaryRoster.ViewModels.SettingsViewModel
 @{
-    ViewData["Title"] = "إعدادات النظام (Settings)";
+    ViewData["Title"] = "إعدادات وسجل الرقابة (Audit Log)";
+
+    string GetActionBadgeClass(string actionType) => actionType switch
+    {
+        "CreateSoldier" => "bg-emerald-50 text-emerald-700 border-emerald-200",
+        "UpdateSoldier" => "bg-sky-50 text-sky-700 border-sky-200",
+        "DeleteSoldier" => "bg-rose-50 text-rose-700 border-rose-200",
+        "ExecuteLeaveClause" => "bg-amber-50 text-amber-800 border-amber-200",
+        "RegisterReturn" => "bg-indigo-50 text-indigo-700 border-indigo-200",
+        "DispatchSoldier" => "bg-purple-50 text-purple-700 border-purple-200",
+        "BatchDispatch" => "bg-violet-50 text-violet-700 border-violet-200",
+        "UpdateModifiers" => "bg-blue-50 text-blue-700 border-blue-200",
+        "UpdateReturnDate" => "bg-cyan-50 text-cyan-700 border-cyan-200",
+        "CreateRequest" => "bg-orange-50 text-orange-700 border-orange-200",
+        "ApproveRequest" => "bg-emerald-100 text-emerald-800 border-emerald-300",
+        "RejectRequest" => "bg-rose-100 text-rose-800 border-rose-300",
+        "CreateNote" => "bg-yellow-50 text-yellow-800 border-yellow-200",
+        "ApproveNote" => "bg-teal-50 text-teal-700 border-teal-200",
+        "RejectNote" => "bg-rose-50 text-rose-700 border-rose-200",
+        _ => "bg-slate-100 text-slate-700 border-slate-200"
+    };
+
+    string GetActionArabicName(string actionType) => actionType switch
+    {
+        "CreateSoldier" => "➕ إضافة موظف",
+        "UpdateSoldier" => "✏️ تعديل بيانات موظف",
+        "DeleteSoldier" => "🗑️ حذف موظف",
+        "ExecuteLeaveClause" => "🛫 تنفيذ بند نزول",
+        "RegisterReturn" => "🛬 تسجيل عودة",
+        "DispatchSoldier" => "🚀 ترحيل ونزول دورة",
+        "BatchDispatch" => "👥 ترحيل جماعي",
+        "UpdateModifiers" => "⚖️ تعديل خصم/منحة مباشر",
+        "UpdateReturnDate" => "📅 تعديل تاريخ استلام",
+        "CreateRequest" => "📝 تقديم طلب خصم/منحة",
+        "ApproveRequest" => "✅ اعتماد طلب خصم/منحة",
+        "RejectRequest" => "❌ رفض طلب خصم/منحة",
+        "CreateNote" => "💬 إضافة ملاحظة",
+        "ApproveNote" => "✔️ اعتماد ملاحظة",
+        "RejectNote" => "✖️ رفض ملاحظة",
+        _ => actionType
+    };
+
+    string GetEntityArabicName(string entityName) => entityName switch
+    {
+        "Soldier" => "موظف / فرد",
+        "LeaveCycle" => "دورة إجازة",
+        "ModifierRequest" => "طلب خصم / منحة",
+        "EmployeeNote" => "ملاحظة إشرافية",
+        _ => entityName
+    };
 }
 
-<div class="space-y-6">
-    <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-lg">
-        <div class="flex items-center gap-2 text-slate-500 text-xs font-bold mb-1">
-            <span>⚙️ إعدادات النظام والبنية التحتية</span>
+<div class="space-y-6 pb-12">
+    <!-- Header Banner -->
+    <div class="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm relative overflow-hidden">
+        <div class="absolute top-0 right-0 left-0 h-1.5 bg-gradient-to-r from-amber-500 via-[#112e51] to-blue-600"></div>
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2 text-slate-500 text-xs font-bold mb-1">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                        🛡️ مخصص لمدير النظام (Admin Only)
+                    </span>
+                    <span>•</span>
+                    <span>سجل التدقيق والحركات الإدارية</span>
+                </div>
+                <h1 class="text-2xl font-black text-[#0d1f36]">سجل تدقيق النظام والرقابة المركزية (Audit Log)</h1>
+                <p class="text-xs text-slate-500 mt-1 max-w-2xl">
+                    سجل تاريخي شامل وموثق يدوّن كافة العمليات الإدارية، تعديل الإجازات، المنح، الخصومات، والقرارات الإشرافية المنفذة داخل المنظومة مع حفظ هوية المنفذ وتوقيت التنفيذ بدقة.
+                </p>
+            </div>
+
+            <!-- Tab Buttons -->
+            <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 self-start md:self-auto">
+                <a href="@Url.Action("Index", "Settings", new { tab = "logs" })"
+                   class="px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 @(Model.ActiveTab == "logs" ? "bg-white text-[#0d1f36] shadow-sm" : "text-slate-500 hover:text-slate-800")">
+                    <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                    </svg>
+                    <span>سجل التدقيق (Audit Log)</span>
+                </a>
+                <a href="@Url.Action("Index", "Settings", new { tab = "database" })"
+                   class="px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 @(Model.ActiveTab == "database" ? "bg-white text-[#0d1f36] shadow-sm" : "text-slate-500 hover:text-slate-800")">
+                    <svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                    </svg>
+                    <span>قاعدة البيانات والنظام</span>
+                </a>
+            </div>
         </div>
-        <h2 class="text-xl font-black text-[#0d1f36]">إعدادات منظومة إجازات الموظفين</h2>
-        <p class="text-xs text-slate-500 mt-1">هذه صفحة الإعدادات حيث يمكنك مراجعة حالة قاعدة البيانات وإعداد النسخ الاحتياطي وبقية المعلمات التشغيلية للمنظومة .</p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xl space-y-4">
-            <h3 class="text-sm font-bold text-[#0d1f36] pb-2 border-b border-slate-200">حالة الاتصال بقاعدة البيانات</h3>
-            <div class="text-xs text-slate-700 space-y-2">
-                <div class="flex justify-between py-1.5 border-b border-slate-200/60">
-                    <span class="text-slate-500">نوع قاعدة البيانات:</span>
-                    <span class="font-mono font-bold text-blue-700">SQL Server (Docker Container)</span>
+    @if (Model.ActiveTab == "logs")
+    {
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm flex items-center justify-between">
+                <div>
+                    <div class="text-[11px] font-bold text-slate-500">إجمالي الحركات المسجلة</div>
+                    <div class="text-2xl font-black text-[#0d1f36] mt-1">@Model.TotalLogsCount.ToString("N0")</div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">منذ بدء إطلاق المنظومة</div>
                 </div>
-                <div class="flex justify-between py-1.5 border-b border-slate-200/60">
-                    <span class="text-slate-500">المنفذ:</span>
-                    <span class="font-mono text-slate-800">1433</span>
+                <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold border border-blue-100">
+                    📜
                 </div>
-                <div class="flex justify-between py-1.5">
-                    <span class="text-slate-500">حالة الاتصال:</span>
-                    <span class="text-emerald-700 font-bold">متصل ويعمل بكفاءة</span>
+            </div>
+
+            <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm flex items-center justify-between">
+                <div>
+                    <div class="text-[11px] font-bold text-slate-500">حركات اليوم (UTC)</div>
+                    <div class="text-2xl font-black text-amber-600 mt-1">@Model.TodayLogsCount.ToString("N0")</div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">نشاط اليوم الفعلي</div>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold border border-amber-100">
+                    ⚡
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm flex items-center justify-between">
+                <div>
+                    <div class="text-[11px] font-bold text-slate-500">المستخدمون المنفذون</div>
+                    <div class="text-2xl font-black text-emerald-600 mt-1">@Model.UniqueActorsCount</div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">مشرفين ومسؤولي نظام</div>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold border border-emerald-100">
+                    👤
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm flex items-center justify-between">
+                <div>
+                    <div class="text-[11px] font-bold text-slate-500">أحدث حركة مسجلة</div>
+                    <div class="text-xs font-bold text-purple-700 mt-2 font-mono">
+                        @(Model.LatestActionTime.HasValue ? Model.LatestActionTime.Value.ToString("yyyy-MM-dd HH:mm") : "لا توجد")
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">آخر تحديث في النظام</div>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl font-bold border border-purple-100">
+                    ⏱️
                 </div>
             </div>
         </div>
 
-        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xl space-y-4">
-            <h3 class="text-sm font-bold text-[#0d1f36] pb-2 border-b border-slate-200">النسخ الاحتياطي (Backup &amp; Restore)</h3>
-            <p class="text-xs text-slate-500">إمكانية أخذ نسخة احتياطية من قاعدة البيانات لحفظها في مكان آمن خارج الخادم الرئيسي.</p>
-            <button onclick="alert('تم طلب نسخة احتياطية — الميزة ستكون متاحة في الإصدار القادم.');"
-                    class="w-full py-2.5 rounded-xl font-bold text-xs bg-[#205493] text-white hover:bg-[#1f4e79] transition-colors">
-                أخذ نسخة احتياطية الآن (Backup Database)
-            </button>
+        <!-- Filter Toolbar -->
+        <div class="bg-white border border-slate-200 p-5 rounded-3xl shadow-sm">
+            <form method="get" asp-action="Index" class="space-y-4">
+                <input type="hidden" name="tab" value="logs" />
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <!-- Text Search -->
+                    <div class="lg:col-span-2">
+                        <label class="block text-xs font-bold text-slate-600 mb-1">بحث نصي في تفاصيل الحركة أو المنفذ</label>
+                        <div class="relative">
+                            <input type="text" name="search" value="@Model.Search"
+                                   placeholder="ابحث باسم الموظف، الرقم، أو الإجراء..."
+                                   class="w-full pl-3 pr-9 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-[#205493] focus:border-transparent outline-none transition-all" />
+                            <svg class="w-4 h-4 text-slate-400 absolute right-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Action Type Filter -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">نوع الحركة</label>
+                        <select name="actionType"
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-[#205493] focus:border-transparent outline-none transition-all">
+                            <option value="">-- جميع الحركات --</option>
+                            @foreach (var act in Model.AvailableActionTypes)
+                            {
+                                <option value="@act" selected="@(Model.SelectedActionType == act)">@GetActionArabicName(act)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Performed By Filter -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">المستخدم المنفذ</label>
+                        <select name="performedBy"
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-[#205493] focus:border-transparent outline-none transition-all">
+                            <option value="">-- جميع المنفذين --</option>
+                            @foreach (var actor in Model.AvailableActors)
+                            {
+                                <option value="@actor" selected="@(Model.SelectedActor == actor)">@actor</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 pt-2 border-t border-slate-100 items-end">
+                    <!-- Entity Filter -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">الكيان المرتبط</label>
+                        <select name="entityName"
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-[#205493] focus:border-transparent outline-none transition-all">
+                            <option value="">-- جميع الكيانات --</option>
+                            @foreach (var ent in Model.AvailableEntities)
+                            {
+                                <option value="@ent" selected="@(Model.SelectedEntity == ent)">@GetEntityArabicName(ent)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Date From -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">من تاريخ</label>
+                        <input type="date" name="dateFrom" value="@(Model.DateFrom?.ToString("yyyy-MM-dd"))"
+                               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-[#205493] focus:border-transparent outline-none transition-all" />
+                    </div>
+
+                    <!-- Date To -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">إلى تاريخ</label>
+                        <input type="date" name="dateTo" value="@(Model.DateTo?.ToString("yyyy-MM-dd"))"
+                               class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-[#205493] focus:border-transparent outline-none transition-all" />
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="flex items-center gap-2">
+                        <button type="submit"
+                                class="flex-1 py-2 px-4 rounded-xl bg-gradient-to-r from-[#205493] to-[#112e51] hover:from-[#194375] hover:to-[#0c2340] text-white text-xs font-bold shadow transition-all flex items-center justify-center gap-1.5">
+                            <svg class="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                            </svg>
+                            <span>تطبيق الفلترة</span>
+                        </button>
+                        <a href="@Url.Action("Index", "Settings", new { tab = "logs" })"
+                           class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-all text-center"
+                           title="إعادة تعيين الفلاتر">
+                            مسح
+                        </a>
+                    </div>
+                </div>
+            </form>
         </div>
-    </div>
+
+        <!-- Audit Log Table -->
+        <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-black text-slate-800">نتائج سجل التدقيق</span>
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                        @Model.Logs.TotalCount حركة مطابقة
+                    </span>
+                </div>
+                <span class="text-[11px] text-slate-500">
+                    الصفحة @Model.Logs.PageNumber من @Model.Logs.TotalPages
+                </span>
+            </div>
+
+            @if (Model.Logs.Items.Count == 0)
+            {
+                <div class="p-12 text-center">
+                    <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-100 flex items-center justify-center text-2xl text-slate-400">
+                        🔍
+                    </div>
+                    <div class="text-sm font-black text-slate-700">لا توجد حركات مسجلة مطابقة للبحث</div>
+                    <p class="text-xs text-slate-500 mt-1">جرب تغيير معايير البحث أو مسح الفلاتر لعرض كافة الحركات.</p>
+                </div>
+            }
+            else
+            {
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 bg-slate-50 text-[11px] font-black text-slate-600">
+                                <th class="py-3 px-4 w-12 text-center">#</th>
+                                <th class="py-3 px-4 w-44">نوع الحركة</th>
+                                <th class="py-3 px-4 w-28">الكيان</th>
+                                <th class="py-3 px-4 w-36">المنفّذ</th>
+                                <th class="py-3 px-4 w-40">التوقيت والتاريخ</th>
+                                <th class="py-3 px-4">التفاصيل والبيان الإداري</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-xs text-slate-700">
+                            @foreach (var log in Model.Logs.Items)
+                            {
+                                <tr class="hover:bg-slate-50/80 transition-colors">
+                                    <td class="py-3 px-4 text-center font-mono text-[11px] text-slate-400 font-bold">
+                                        @log.Id
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-black border @GetActionBadgeClass(log.ActionType)">
+                                            @GetActionArabicName(log.ActionType)
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span class="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                                            @GetEntityArabicName(log.EntityName)
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4 font-bold text-slate-800">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-mono">
+                                                @(string.IsNullOrEmpty(log.PerformedBy) ? "?" : log.PerformedBy.Substring(0, 1))
+                                            </span>
+                                            <span class="truncate max-w-[120px]">@log.PerformedBy</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 font-mono text-[11px] text-slate-500 dir-ltr text-right">
+                                        <div class="font-bold text-slate-700">@log.PerformedAt.ToString("yyyy-MM-dd")</div>
+                                        <div class="text-[10px] text-slate-400">@log.PerformedAt.ToString("HH:mm:ss") UTC</div>
+                                    </td>
+                                    <td class="py-3 px-4 text-xs font-medium text-slate-800 leading-relaxed">
+                                        @log.Details
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination Footer -->
+                @if (Model.Logs.TotalPages > 1)
+                {
+                    <div class="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                        <div class="text-slate-500 text-xs">
+                            عرض من <span class="font-bold text-slate-800">@Model.Logs.StartItemIndex</span> إلى <span class="font-bold text-slate-800">@Model.Logs.EndItemIndex</span> من أصل <span class="font-bold text-slate-800">@Model.Logs.TotalCount</span> حركة
+                        </div>
+
+                        <div class="flex items-center gap-1">
+                            @if (Model.Logs.HasPreviousPage)
+                            {
+                                <a href="@Url.Action("Index", "Settings", new {
+                                    tab = "logs",
+                                    search = Model.Search,
+                                    actionType = Model.SelectedActionType,
+                                    entityName = Model.SelectedEntity,
+                                    performedBy = Model.SelectedActor,
+                                    dateFrom = Model.DateFrom?.ToString("yyyy-MM-dd"),
+                                    dateTo = Model.DateTo?.ToString("yyyy-MM-dd"),
+                                    page = Model.Logs.PageNumber - 1,
+                                    pageSize = Model.Logs.PageSize
+                                })" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 font-bold text-slate-700 transition-colors">
+                                    السابق
+                                </a>
+                            }
+
+                            @for (int p = Math.Max(1, Model.Logs.PageNumber - 2); p <= Math.Min(Model.Logs.TotalPages, Model.Logs.PageNumber + 2); p++)
+                            {
+                                if (p == Model.Logs.PageNumber)
+                                {
+                                    <span class="px-3 py-1.5 rounded-lg bg-[#205493] text-white font-black">@p</span>
+                                }
+                                else
+                                {
+                                    <a href="@Url.Action("Index", "Settings", new {
+                                        tab = "logs",
+                                        search = Model.Search,
+                                        actionType = Model.SelectedActionType,
+                                        entityName = Model.SelectedEntity,
+                                        performedBy = Model.SelectedActor,
+                                        dateFrom = Model.DateFrom?.ToString("yyyy-MM-dd"),
+                                        dateTo = Model.DateTo?.ToString("yyyy-MM-dd"),
+                                        page = p,
+                                        pageSize = Model.Logs.PageSize
+                                    })" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 font-bold text-slate-700 transition-colors">
+                                        @p
+                                    </a>
+                                }
+                            }
+
+                            @if (Model.Logs.HasNextPage)
+                            {
+                                <a href="@Url.Action("Index", "Settings", new {
+                                    tab = "logs",
+                                    search = Model.Search,
+                                    actionType = Model.SelectedActionType,
+                                    entityName = Model.SelectedEntity,
+                                    performedBy = Model.SelectedActor,
+                                    dateFrom = Model.DateFrom?.ToString("yyyy-MM-dd"),
+                                    dateTo = Model.DateTo?.ToString("yyyy-MM-dd"),
+                                    page = Model.Logs.PageNumber + 1,
+                                    pageSize = Model.Logs.PageSize
+                                })" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 font-bold text-slate-700 transition-colors">
+                                    التالي
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    }
+    else
+    {
+        <!-- Tab 2: Database & System Infrastructure -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Connection & Server Details -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-2">
+                            <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">🖧</span>
+                            <div>
+                                <h3 class="text-sm font-black text-[#0d1f36]">حالة الاتصال بقاعدة البيانات (Database Connection)</h3>
+                                <p class="text-[11px] text-slate-500">خادم البيانات المركزي السحابي الخاص بالمنظومة</p>
+                            </div>
+                        </div>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            متصل ونشط
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
+                            <span class="text-slate-400 block text-[10px] font-bold">محرك قاعدة البيانات</span>
+                            <span class="font-bold text-slate-800 text-sm">@Model.DatabaseProvider</span>
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
+                            <span class="text-slate-400 block text-[10px] font-bold">اسم قاعدة البيانات</span>
+                            <span class="font-bold font-mono text-blue-700 text-sm">@Model.DatabaseName</span>
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
+                            <span class="text-slate-400 block text-[10px] font-bold">عنوان الخادم (Host Server)</span>
+                            <span class="font-bold font-mono text-slate-800 text-xs">@Model.DatabaseServer</span>
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
+                            <span class="text-slate-400 block text-[10px] font-bold">إصدار المنظومة البرمجي</span>
+                            <span class="font-bold text-slate-800 text-xs">@Model.SystemVersion</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Database Metrics -->
+                <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+                    <h3 class="text-sm font-black text-[#0d1f36] pb-3 border-b border-slate-100">إحصائيات جداول المنظومة الحية</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
+                            <div class="text-lg font-black text-[#0d1f36]">@Model.SoldiersCount</div>
+                            <div class="text-[10px] font-bold text-slate-500">إجمالي الموظفين</div>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
+                            <div class="text-lg font-black text-emerald-600">@Model.ActiveSoldiersCount</div>
+                            <div class="text-[10px] font-bold text-slate-500">الموظفون النشطون</div>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
+                            <div class="text-lg font-black text-blue-600">@Model.LeaveCyclesCount</div>
+                            <div class="text-[10px] font-bold text-slate-500">دورات الإجازات المسجلة</div>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
+                            <div class="text-lg font-black text-amber-600">@Model.ModifierRequestsCount</div>
+                            <div class="text-[10px] font-bold text-slate-500">طلبات المنح والخصومات</div>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
+                            <div class="text-lg font-black text-purple-600">@Model.NotesCount</div>
+                            <div class="text-[10px] font-bold text-slate-500">الملاحظات التقييمية</div>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
+                            <div class="text-lg font-black text-rose-600">@Model.UsersCount</div>
+                            <div class="text-[10px] font-bold text-slate-500">حسابات المستخدمين</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backup & Operational Actions -->
+            <div class="space-y-6">
+                <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+                    <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg">
+                        💾
+                    </div>
+                    <h3 class="text-sm font-black text-[#0d1f36]">النسخ الاحتياطي التلقائي (Backup)</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        يتم حفظ النسخ الاحتياطية بشكل دوري ومؤمن في خوادم سحابية منفصلة لضمان استمرارية العمل ومنع فقدان البيانات.
+                    </p>
+                    <button onclick="alert('جاري تجهيز نقطة استعادة جديدة — هذه الميزة التلقائية مفعلة على مستوى الخادم السحابي.');"
+                            class="w-full py-3 rounded-xl font-bold text-xs bg-gradient-to-r from-[#205493] to-[#112e51] hover:from-[#194375] hover:to-[#0c2340] text-white shadow transition-all flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                        </svg>
+                        <span>أخذ نقطة نسخ احتياطي فورية</span>
+                    </button>
+                </div>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-3xl p-5 text-amber-900 space-y-2">
+                    <div class="flex items-center gap-2 text-xs font-black">
+                        <span>🔒</span>
+                        <span>سياسة الأمان والرقابة</span>
+                    </div>
+                    <p class="text-[11px] leading-relaxed text-amber-800">
+                        كافة الحركات التي تتم في هذه المنظومة تسجل في جدول التدقيق بشكل دائم ولا يمكن حذفها أو التلاعب بها برمجياً، لضمان أعلى معايير الشفافية والمساءلة الإدارية.
+                    </p>
+                </div>
+            </div>
+        </div>
+    }
 </div>

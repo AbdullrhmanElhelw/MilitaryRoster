@@ -487,6 +487,15 @@ public class RosterService : IRosterService
             soldier.SoldierType.LeaveDays,
             cycle.BonusDays);
 
+        _context.AuditLogs.Add(new AuditLog
+        {
+            EntityName = "Soldier",
+            ActionType = "UpdateModifiers",
+            PerformedBy = "مدير النظام",
+            PerformedAt = DateTime.UtcNow,
+            Details = $"تعديل مباشر للخصم ({deductionDays} يوم) والمنحة ({bonusDays} يوم) للموظف: {soldier.FullName} ({soldier.MilitaryNumber})"
+        });
+
         await _context.SaveChangesAsync();
 
         return MapToViewModel(soldier, today);
@@ -518,6 +527,15 @@ public class RosterService : IRosterService
             cycle.LeaveStartDate,
             soldier.SoldierType.LeaveDays,
             cycle.BonusDays);
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            EntityName = "Soldier",
+            ActionType = "UpdateReturnDate",
+            PerformedBy = "مدير النظام",
+            PerformedAt = DateTime.UtcNow,
+            Details = $"تعديل تاريخ الاستلام للموظف: {soldier.FullName} ({soldier.MilitaryNumber}) إلى {newReturnDate:yyyy-MM-dd}"
+        });
 
         await _context.SaveChangesAsync();
 
@@ -621,6 +639,16 @@ public class RosterService : IRosterService
         soldier.SoldierTypeId = soldierTypeId;
         soldier.ServiceEndDate = serviceEndDate;
         soldier.Notes = notes;
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            EntityName = "Soldier",
+            ActionType = "UpdateSoldier",
+            PerformedBy = "مدير النظام",
+            PerformedAt = DateTime.UtcNow,
+            Details = $"تعديل بيانات الموظف: {soldier.FullName} (رقم الموظف: {soldier.MilitaryNumber})"
+        });
+
         await _context.SaveChangesAsync();
     }
 
@@ -629,6 +657,15 @@ public class RosterService : IRosterService
         var soldier = await _context.Soldiers.FindAsync(soldierId);
         if (soldier != null)
         {
+            _context.AuditLogs.Add(new AuditLog
+            {
+                EntityName = "Soldier",
+                ActionType = "DeleteSoldier",
+                PerformedBy = "مدير النظام",
+                PerformedAt = DateTime.UtcNow,
+                Details = $"حذف الموظف نهائياً: {soldier.FullName} (رقم الموظف: {soldier.MilitaryNumber})"
+            });
+
             _context.Soldiers.Remove(soldier);
             await _context.SaveChangesAsync();
         }
@@ -794,25 +831,49 @@ public class RosterService : IRosterService
 
     public async Task<bool> ApproveNoteAsync(int noteId, string approvedBy)
     {
-        var note = await _context.EmployeeNotes.FindAsync(noteId);
+        var note = await _context.EmployeeNotes
+            .Include(n => n.Soldier)
+            .FirstOrDefaultAsync(n => n.Id == noteId);
         if (note == null) return false;
 
         note.Status = NoteStatus.Approved;
         note.ApprovedBy = approvedBy;
         note.ReviewedAt = DateTime.UtcNow;
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            EntityName = "EmployeeNote",
+            ActionType = "ApproveNote",
+            PerformedBy = approvedBy,
+            PerformedAt = DateTime.UtcNow,
+            Details = $"اعتماد ملاحظة للموظف {note.Soldier?.FullName}: {note.NoteText}"
+        });
+
         await _context.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> RejectNoteAsync(int noteId, string rejectedBy, string? comment = null)
     {
-        var note = await _context.EmployeeNotes.FindAsync(noteId);
+        var note = await _context.EmployeeNotes
+            .Include(n => n.Soldier)
+            .FirstOrDefaultAsync(n => n.Id == noteId);
         if (note == null) return false;
 
         note.Status = NoteStatus.Rejected;
         note.ApprovedBy = rejectedBy;
         note.ReviewedAt = DateTime.UtcNow;
         note.AdminComment = comment;
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            EntityName = "EmployeeNote",
+            ActionType = "RejectNote",
+            PerformedBy = rejectedBy,
+            PerformedAt = DateTime.UtcNow,
+            Details = $"رفض ملاحظة للموظف {note.Soldier?.FullName}. السبب: {comment ?? "بدون سبب"}"
+        });
+
         await _context.SaveChangesAsync();
         return true;
     }

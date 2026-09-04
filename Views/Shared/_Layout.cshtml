@@ -134,6 +134,51 @@
         window.addEventListener('open-edit-soldier-modal', () => {
             setTimeout(updateArabicDateInputs, 50);
         });
+
+        // Live System Clock & Date
+        function initSystemLiveClock() {
+            const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+            const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+
+            function updateClock() {
+                const now = new Date();
+                const dayEl = document.getElementById('live-day-name');
+                const dateEl = document.getElementById('live-full-date');
+                const timeEl = document.getElementById('live-clock-time');
+                const periodEl = document.getElementById('live-clock-period');
+
+                if (!dayEl || !dateEl || !timeEl) return;
+
+                const dayName = days[now.getDay()];
+                const dayNum = String(now.getDate()).padStart(2, '0');
+                const monthName = months[now.getMonth()];
+                const year = now.getFullYear();
+
+                dayEl.textContent = dayName;
+                dateEl.textContent = `${dayNum} ${monthName} ${year}`;
+
+                let hours = now.getHours();
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                const period = hours >= 12 ? 'م' : 'ص';
+
+                hours = hours % 12;
+                hours = hours ? hours : 12;
+                const formattedHours = String(hours).padStart(2, '0');
+
+                timeEl.textContent = `${formattedHours}:${minutes}:${seconds}`;
+                if (periodEl) periodEl.textContent = period;
+            }
+
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSystemLiveClock);
+        } else {
+            initSystemLiveClock();
+        }
     </script>
 </head>
 <body class="h-full flex bg-[#f8fafc] text-slate-800 antialiased font-cairo"
@@ -292,15 +337,102 @@
 
     <!-- Main Content Wrapper -->
     <div class="flex-1 flex flex-col min-w-0 overflow-y-auto bg-[#f8fafc]">
-        <!-- Top Mobile Header -->
-        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:hidden shadow-sm">
-            <button @@click="sidebarOpen = true" class="text-slate-600 p-2">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-            </button>
-            <div class="font-bold text-sm text-[#0d1f36]">منظومة إجازات الموظفين</div>
-            <div class="w-6"></div>
+        <!-- Sticky Top Navigation Bar with Fixed Live Date & Time -->
+        @{
+            var nowUtc = DateTime.UtcNow;
+            var cairoNow = nowUtc.AddHours(3);
+            string[] arDays = { "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت" };
+            string[] arMonths = { "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر" };
+            var initDayName = arDays[(int)cairoNow.DayOfWeek];
+            var initFullDate = $"{cairoNow.Day:D2} {arMonths[cairoNow.Month - 1]} {cairoNow.Year}";
+            var initHour12 = cairoNow.Hour % 12 == 0 ? 12 : cairoNow.Hour % 12;
+            var initTime = $"{initHour12:D2}:{cairoNow.Minute:D2}:{cairoNow.Second:D2}";
+            var initPeriod = cairoNow.Hour >= 12 ? "م" : "ص";
+        }
+
+        <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 sm:px-6 py-2.5 shadow-sm transition-all">
+            <div class="flex items-center justify-between gap-3 max-w-[1700px] mx-auto">
+                <!-- Right Side (RTL Start): Mobile Hamburger + System Status -->
+                <div class="flex items-center gap-3">
+                    <button @@click="sidebarOpen = true" 
+                            class="lg:hidden p-2 rounded-xl text-slate-600 hover:text-[#0d1f36] hover:bg-slate-100 transition-colors"
+                            title="القائمة الرئيسية">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+
+                    <div class="flex items-center gap-2.5">
+                        <span class="relative flex h-2.5 w-2.5">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                        </span>
+                        <div class="hidden sm:block">
+                            <div class="text-xs font-black text-[#0d1f36]">منظومة إجازات وجداول الموظفين</div>
+                            <div class="text-[10px] text-emerald-700 font-bold">التشغيل الرسمي والتمام المباشر</div>
+                        </div>
+                        <div class="sm:hidden text-xs font-black text-[#0d1f36]">
+                            منظومة الإجازات
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center: Prominent Fixed Live Date & Clock Widget -->
+                <div class="flex items-center">
+                    <div class="bg-gradient-to-r from-[#0d1f36] via-[#112e51] to-[#0d1f36] text-white border border-[#1a3a60] rounded-2xl px-3 sm:px-5 py-2 shadow-md flex items-center gap-2.5 sm:gap-4">
+                        <!-- Calendar / Today's Date -->
+                        <div class="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
+                            <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span class="text-slate-300 font-bold hidden md:inline text-[11px]">تاريخ اليوم:</span>
+                            <span id="live-day-name" class="font-black text-amber-300">@initDayName</span>
+                            <span class="text-slate-400 font-bold">،</span>
+                            <span id="live-full-date" class="font-bold text-white font-mono tracking-wide text-xs sm:text-sm">@initFullDate</span>
+                        </div>
+
+                        <!-- Divider -->
+                        <div class="h-4 sm:h-5 w-px bg-white/20"></div>
+
+                        <!-- Clock / Live Time -->
+                        <div class="flex items-center gap-1.5 sm:gap-2">
+                            <svg class="w-4 h-4 text-amber-400 shrink-0 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span id="live-clock-time" class="font-mono font-black text-amber-300 text-xs sm:text-base tracking-wider tabular-nums">@initTime</span>
+                            <span id="live-clock-period" class="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">@initPeriod</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Left Side (RTL End): User Pill & Quick Actions -->
+                <div class="flex items-center gap-2">
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <div class="hidden md:flex items-center gap-2 pl-3 border-l border-slate-200">
+                            <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 flex items-center justify-center font-bold text-xs">
+                                @(User.Identity.Name?.Substring(0, 1).ToUpper() ?? "U")
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs font-black text-slate-800">@User.Identity.Name</div>
+                                <div class="text-[10px] font-bold text-amber-600">
+                                    @(User.IsInRole("Admin") ? "مدير النظام" : User.IsInRole("Supervisor") ? "مشرف" : "موظف")
+                                </div>
+                            </div>
+                        </div>
+
+                        <form asp-controller="Account" asp-action="Logout" method="post" class="inline">
+                            <button type="submit" 
+                                    class="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all" 
+                                    title="تسجيل الخروج من المنظومة">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
         </header>
 
         <!-- Main Body -->
