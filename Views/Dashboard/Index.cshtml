@@ -1,0 +1,241 @@
+@model MilitaryRoster.ViewModels.DashboardViewModel
+
+@{
+    ViewData["Title"] = "لوحة القيادة الرئيسية (Dashboard)";
+}
+
+<div class="space-y-6">
+    <!-- Top Statistics Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3.5">
+        <div class="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-sm">
+            <div class="text-[11px] text-slate-500 font-bold mb-1">إجمالي الموظفين</div>
+            <div class="text-2xl font-black text-[#0d1f36] font-mono">@Model.Kpi.TotalForce</div>
+            <div class="text-[10px] text-slate-500 font-bold mt-1">القوة المقيدة</div>
+        </div>
+
+        <div class="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-sm">
+            <div class="text-[11px] text-slate-500 font-bold mb-1">المتواجدون</div>
+            <div class="text-2xl font-black text-emerald-700 font-mono">@Model.Kpi.OnDutyCount</div>
+            <div class="text-[10px] text-emerald-600 font-bold mt-1">داخل الخدمة</div>
+        </div>
+
+        <div class="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-sm">
+            <div class="text-[11px] text-slate-500 font-bold mb-1">في إجازة</div>
+            <div class="text-2xl font-black text-purple-700 font-mono">@Model.Kpi.OnLeaveCount</div>
+            <div class="text-[10px] text-purple-600 font-bold mt-1">فترة الراحة</div>
+        </div>
+
+        <div class="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-sm">
+            <div class="text-[11px] text-slate-500 font-bold mb-1">نزول اليوم</div>
+            <div class="text-2xl font-black text-blue-700 font-mono">@Model.Kpi.LeaveTodayCount</div>
+            <div class="text-[10px] text-blue-600 font-bold mt-1">جاهزون للتحرك</div>
+        </div>
+
+        <div class="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-sm">
+            <div class="text-[11px] text-slate-500 font-bold mb-1">نزول غداً (البند)</div>
+            <div class="text-2xl font-black text-amber-600 font-mono">@Model.Kpi.EligibleTomorrowCount</div>
+            <div class="text-[10px] text-amber-700 font-bold mt-1">عمل البند</div>
+        </div>
+
+        <div class="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-sm">
+            <div class="text-[11px] text-slate-500 font-bold mb-1">عودة اليوم</div>
+            <div class="text-2xl font-black text-emerald-700 font-mono">@Model.Kpi.ReturnTodayCount</div>
+            <div class="text-[10px] text-emerald-600 font-bold mt-1">استلام وصول</div>
+        </div>
+
+        <div class="bg-white border border-rose-200 p-4 rounded-2xl shadow-sm bg-rose-50/40">
+            <div class="text-[11px] text-rose-700 font-bold mb-1">المتأخرون عن العودة</div>
+            <div class="text-2xl font-black text-rose-600 font-mono">@Model.Kpi.OverdueReturnCount</div>
+            <div class="text-[10px] text-rose-600 font-bold mt-1">تنبيه حرج</div>
+        </div>
+    </div>
+
+    <!-- Notification Center Header -->
+    <div class="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+            </div>
+            <div>
+                <h3 class="text-xs sm:text-sm font-black text-[#0d1f36]">مركز التنبيهات الرسمية الفورية (Notification Center)</h3>
+                <p class="text-[11px] text-slate-500 font-bold mt-0.5">
+                    @(Model.Kpi.EligibleTomorrowCount) موظفين موعد نزولهم غداً • @(Model.Kpi.LeaveTodayCount) موظفين نزول اليوم • @(Model.Kpi.ReturnTodayCount) موظفين عودة اليوم • @(Model.Kpi.OverdueReturnCount) موظفين متأخرون عن العودة
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="/LeaveClauses" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white text-slate-950 transition-colors shadow-sm">
+                فتح شاشة البنود
+            </a>
+            <a href="/ReturnManagement" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#205493] hover:bg-[#112e51] text-white transition-colors shadow-sm">
+                تسجيل العودة
+            </a>
+        </div>
+    </div>
+
+    <!-- 4 Main Action Columns / Grids -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        
+        <!-- قسم: النزول غداً (Eligible for Leave Tomorrow) -->
+        <div class="bg-white border border-amber-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+                    <h3 class="text-xs font-black text-amber-800 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                        <span>الموظفين مستحقو النزول غداً (عمل البند)</span>
+                    </h3>
+                    <span class="text-[11px] font-mono font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">@Model.EligibleTomorrow.Count موظف</span>
+                </div>
+
+                @if (!Model.EligibleTomorrow.Any())
+                {
+                    <div class="py-6 text-center text-xs text-slate-500 font-bold">لا يوجد موظفين موعد نزولهم غداً</div>
+                }
+                else
+                {
+                    <div class="space-y-2">
+                        @foreach (var s in Model.EligibleTomorrow)
+                        {
+                            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/90 flex items-center justify-between">
+                                <div>
+                                    <div class="font-black text-slate-900 text-xs">@s.FullName</div>
+                                    <div class="text-[10px] text-slate-500 font-mono mt-0.5">رقم الموظف: @s.MilitaryNumber • نوع: @s.SoldierTypeName</div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                        مسموح بالنزول غداً
+                                    </span>
+                                    <form asp-controller="LeaveClauses" asp-action="Execute" method="post" class="inline">
+                                        <input type="hidden" name="SoldierId" value="@s.SoldierId" />
+                                        <button type="submit" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white text-slate-950 shadow-sm cursor-pointer">
+                                            عمل البند
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- قسم: النزول اليوم (Leave Today) -->
+        <div class="bg-white border border-blue-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+                    <h3 class="text-xs font-black text-blue-900 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-600 text-white"></span>
+                        <span>الموظفين موعد نزولهم اليوم (جاهز للتحرك)</span>
+                    </h3>
+                    <span class="text-[11px] font-mono font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">@Model.LeaveToday.Count موظف</span>
+                </div>
+
+                @if (!Model.LeaveToday.Any())
+                {
+                    <div class="py-6 text-center text-xs text-slate-500 font-bold">لا يوجد موظفين موعد نزولهم اليوم</div>
+                }
+                else
+                {
+                    <div class="space-y-2">
+                        @foreach (var s in Model.LeaveToday)
+                        {
+                            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/90 flex items-center justify-between">
+                                <div>
+                                    <div class="font-black text-slate-900 text-xs">@s.FullName</div>
+                                    <div class="text-[10px] text-slate-500 font-mono mt-0.5">رقم الموظف: @s.MilitaryNumber • نوع: @s.SoldierTypeName</div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                        نزول اليوم
+                                    </span>
+                                    <a href="/Soldiers/Details/@s.SoldierId" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 shadow-sm">
+                                        تفاصيل
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- قسم: العودة اليوم (Return Today) -->
+        <div class="bg-white border border-emerald-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+                    <h3 class="text-xs font-black text-emerald-900 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 text-white"></span>
+                        <span>الموظفين موعد عودتهم اليوم (استلام الخدمة)</span>
+                    </h3>
+                    <span class="text-[11px] font-mono font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">@Model.ReturnToday.Count موظف</span>
+                </div>
+
+                @if (!Model.ReturnToday.Any())
+                {
+                    <div class="py-6 text-center text-xs text-slate-500 font-bold">لا يوجد موظفين موعد عودتهم اليوم</div>
+                }
+                else
+                {
+                    <div class="space-y-2">
+                        @foreach (var s in Model.ReturnToday)
+                        {
+                            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/90 flex items-center justify-between">
+                                <div>
+                                    <div class="font-black text-slate-900 text-xs">@s.FullName</div>
+                                    <div class="text-[10px] text-slate-500 font-mono mt-0.5">نوع: @s.SoldierTypeName • العودة: @s.ExpectedReturnDate.ToArabic()</div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <a href="/ReturnManagement" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 text-white shadow-sm">
+                                        تسجيل العودة
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- قسم: المتأخرون عن العودة (Overdue Return) -->
+        <div class="bg-white border border-rose-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+                    <h3 class="text-xs font-black text-rose-900 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-rose-600 text-white"></span>
+                        <span>الموظفين المتأخرون عن العودة (تنبيه حرج)</span>
+                    </h3>
+                    <span class="text-[11px] font-mono font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">@Model.OverdueReturn.Count موظف</span>
+                </div>
+
+                @if (!Model.OverdueReturn.Any())
+                {
+                    <div class="py-6 text-center text-xs text-emerald-600 font-bold">لا توجد حالات تأخير عن العودة — التمام منضبط 100%</div>
+                }
+                else
+                {
+                    <div class="space-y-2">
+                        @foreach (var s in Model.OverdueReturn)
+                        {
+                            <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-between">
+                                <div>
+                                    <div class="font-black text-slate-900 text-xs">@s.FullName</div>
+                                    <div class="text-[10px] text-rose-600 font-mono font-bold mt-0.5">تاريخ العودة المفترض: @s.ExpectedReturnDate.ToArabic()</div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                                        متأخر عن العودة
+                                    </span>
+                                    <a href="/ReturnManagement" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 text-white shadow-sm">
+                                        إثبات وصول
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,142 @@
+<!-- نافذة منبثقة لطلب إضافة خصم أو منحة لموظف (تتطلب اعتماد الأدمن) -->
+<div id="modifier-request-modal" class="fixed inset-0 z-50 overflow-y-auto hidden" role="dialog" aria-modal="true">
+    <!-- خلفية معتمة -->
+    <div class="fixed inset-0 bg-white/60 backdrop-blur-sm" onclick="closeModifierModal()"></div>
+
+    <div class="flex min-h-screen items-center justify-center p-4">
+        <div class="relative w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 shadow-2xl text-right">
+            
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                    <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-sm font-black text-[#0d1f36]">طلب تطبيق منحة أو خصم</h3>
+                </div>
+                <button type="button" onclick="closeModifierModal()" class="text-slate-500 hover:text-slate-700 text-lg font-bold">✕</button>
+            </div>
+
+            <!-- Error container if request fails -->
+            <div id="modifier-modal-error" class="hidden mt-3 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold"></div>
+
+            <p class="text-xs text-slate-600 mt-3 font-medium">
+                تقديم طلب للإدارة للموظف: <span id="modifier-soldier-name" class="text-blue-900 font-bold"></span>.
+                <br />
+                <span class="text-[11px] text-amber-800 font-semibold">ملاحظة: هذا الطلب لن يتم تطبيقه في الجدول إلا بعد مراجعة واعتماد مدير النظام (الأدمن).</span>
+            </p>
+
+            <form id="modifier-request-form" method="post" class="mt-4 space-y-4 text-xs">
+                <input type="hidden" id="modifier-soldier-id" name="soldierId" value="" />
+
+                <!-- نوع الطلب -->
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">نوع الطلب</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-emerald-300 bg-emerald-50/50 hover:bg-emerald-50 cursor-pointer transition-all has-[:checked]:bg-emerald-100 has-[:checked]:border-emerald-600 has-[:checked]:font-bold">
+                            <input type="radio" name="requestType" value="Bonus" checked class="text-emerald-600 focus:ring-emerald-500" />
+                            <span class="text-emerald-800 font-bold">منحة (زيادة إجازة)</span>
+                        </label>
+                        <label class="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-rose-300 bg-rose-50/50 hover:bg-rose-50 cursor-pointer transition-all has-[:checked]:bg-rose-100 has-[:checked]:border-rose-600 has-[:checked]:font-bold">
+                            <input type="radio" name="requestType" value="Deduction" class="text-rose-600 focus:ring-rose-500" />
+                            <span class="text-rose-800 font-bold">خصم (تأخير نزول)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- عدد الأيام -->
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">عدد الأيام المطلوبة</label>
+                    <div class="flex items-center gap-3">
+                        <input type="number"
+                               id="modifier-days"
+                               name="days"
+                               value="1"
+                               min="1"
+                               max="30"
+                               required
+                               class="w-24 px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-bold text-sm focus:border-[#205493] focus:ring-1 focus:ring-[#205493] focus:outline-none shadow-sm" />
+                        <span class="text-xs text-slate-500">يوم (من 1 إلى 30 يوم)</span>
+                    </div>
+                </div>
+
+                <!-- مبرر / سبب الطلب -->
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">المبرر / سبب الطلب (مطلوب للإدارة)</label>
+                    <textarea id="modifier-reason"
+                              name="reason"
+                              rows="3"
+                              required
+                              placeholder="اذكر سبب طلب المنحة أو الخصم وتفاصيل الأداء أو المخالفة..."
+                              class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-xs focus:border-[#205493] focus:ring-1 focus:ring-[#205493] focus:outline-none shadow-sm"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModifierModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold transition-colors">
+                        إلغاء
+                    </button>
+                    <button type="submit" class="px-4 py-2 rounded-xl font-black bg-gradient-to-r from-[#205493] to-[#112e51] hover:from-[#1b467a] hover:to-[#0c2440] text-white shadow-md transition-all cursor-pointer">
+                        إرسال الطلب للاعتماد
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openModifierModal(soldierId, soldierName, hasPending) {
+        if (hasPending) {
+            alert('يوجد بالفعل طلب خصم أو منحة معلق لهذا الموظف بانتظار اعتماد الأدمن.');
+            return;
+        }
+
+        const modal = document.getElementById('modifier-request-modal');
+        const form = document.getElementById('modifier-request-form');
+        const idInput = document.getElementById('modifier-soldier-id');
+        const nameSpan = document.getElementById('modifier-soldier-name');
+        const daysInput = document.getElementById('modifier-days');
+        const reasonInput = document.getElementById('modifier-reason');
+        const errDiv = document.getElementById('modifier-modal-error');
+
+        errDiv.classList.add('hidden');
+        errDiv.innerText = '';
+        nameSpan.innerText = soldierName;
+        idInput.value = soldierId;
+        daysInput.value = '1';
+        reasonInput.value = '';
+
+        // Configure HTMX
+        form.setAttribute('hx-post', '/Roster/RequestModifier');
+        form.setAttribute('hx-target', '#soldier-row-' + soldierId);
+        form.setAttribute('hx-swap', 'outerHTML');
+        htmx.process(form);
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeModifierModal() {
+        const modal = document.getElementById('modifier-request-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+
+    document.body.addEventListener('htmx:afterRequest', function (evt) {
+        if (evt.detail.elt && evt.detail.elt.id === 'modifier-request-form') {
+            if (evt.detail.successful) {
+                closeModifierModal();
+            } else {
+                const errDiv = document.getElementById('modifier-modal-error');
+                let errMsg = 'تعذر إرسال الطلب، يرجى التأكد من صحة البيانات.';
+                try {
+                    const res = JSON.parse(evt.detail.xhr.responseText);
+                    if (res && res.message) errMsg = res.message;
+                } catch(e) {}
+                errDiv.innerText = errMsg;
+                errDiv.classList.remove('hidden');
+            }
+        }
+    });
+</script>

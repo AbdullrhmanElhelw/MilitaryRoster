@@ -1,0 +1,42 @@
+@{
+    ViewData["Title"] = "إعدادات النظام (Settings)";
+}
+
+<div class="space-y-6">
+    <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-lg">
+        <div class="flex items-center gap-2 text-slate-500 text-xs font-bold mb-1">
+            <span>⚙️ إعدادات النظام والبنية التحتية</span>
+        </div>
+        <h2 class="text-xl font-black text-[#0d1f36]">إعدادات منظومة إجازات الموظفين</h2>
+        <p class="text-xs text-slate-500 mt-1">هذه صفحة الإعدادات حيث يمكنك مراجعة حالة قاعدة البيانات وإعداد النسخ الاحتياطي وبقية المعلمات التشغيلية للمنظومة .</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xl space-y-4">
+            <h3 class="text-sm font-bold text-[#0d1f36] pb-2 border-b border-slate-200">حالة الاتصال بقاعدة البيانات</h3>
+            <div class="text-xs text-slate-700 space-y-2">
+                <div class="flex justify-between py-1.5 border-b border-slate-200/60">
+                    <span class="text-slate-500">نوع قاعدة البيانات:</span>
+                    <span class="font-mono font-bold text-blue-700">SQL Server (Docker Container)</span>
+                </div>
+                <div class="flex justify-between py-1.5 border-b border-slate-200/60">
+                    <span class="text-slate-500">المنفذ:</span>
+                    <span class="font-mono text-slate-800">1433</span>
+                </div>
+                <div class="flex justify-between py-1.5">
+                    <span class="text-slate-500">حالة الاتصال:</span>
+                    <span class="text-emerald-700 font-bold">متصل ويعمل بكفاءة</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-xl space-y-4">
+            <h3 class="text-sm font-bold text-[#0d1f36] pb-2 border-b border-slate-200">النسخ الاحتياطي (Backup &amp; Restore)</h3>
+            <p class="text-xs text-slate-500">إمكانية أخذ نسخة احتياطية من قاعدة البيانات لحفظها في مكان آمن خارج الخادم الرئيسي.</p>
+            <button onclick="alert('تم طلب نسخة احتياطية — الميزة ستكون متاحة في الإصدار القادم.');"
+                    class="w-full py-2.5 rounded-xl font-bold text-xs bg-[#205493] text-white hover:bg-[#1f4e79] transition-colors">
+                أخذ نسخة احتياطية الآن (Backup Database)
+            </button>
+        </div>
+    </div>
+</div>

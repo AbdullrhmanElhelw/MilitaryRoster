@@ -1,0 +1,79 @@
+<!-- نافذة منبثقة بسيطة ومباشرة لتعديل تاريخ العودة يدوياً -->
+<div id="edit-return-date-modal" class="fixed inset-0 z-50 overflow-y-auto hidden" role="dialog" aria-modal="true">
+    <!-- خلفية معتمة -->
+    <div class="fixed inset-0 bg-white/60 backdrop-blur-sm" onclick="closeEditDateModal()"></div>
+
+    <div class="flex min-h-screen items-center justify-center p-4">
+        <div class="relative w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 shadow-2xl text-right">
+            
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                    <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                        <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-sm font-black text-[#0d1f36]">تعديل تاريخ العودة يدوياً</h3>
+                </div>
+                <button type="button" onclick="closeEditDateModal()" class="text-slate-500 hover:text-slate-700 text-lg font-bold">✕</button>
+            </div>
+
+            <p class="text-xs text-slate-600 mt-3 font-medium">
+                تعديل تاريخ استلام/عودة الموظف: <span id="modal-soldier-name" class="text-amber-800 font-bold"></span>.
+                <br />
+                <span class="text-[11px] text-slate-500">سيتم تلقائياً تحديث موعد النزول القادم وموعد العودة القادمة بناءً على التاريخ الجديد.</span>
+            </p>
+
+            <form id="edit-date-form" method="post" class="mt-4 space-y-4 text-xs">
+                <div>
+                    <label class="block text-slate-700 font-bold mb-1">تاريخ العودة (الاستلام)</label>
+                    <input type="date"
+                           id="modal-current-date"
+                           name="currentReturnDate"
+                           required
+                           class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono text-sm focus:border-[#205493] focus:ring-1 focus:ring-[#205493] focus:outline-none shadow-sm" />
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeEditDateModal()" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold transition-colors">
+                        إلغاء
+                    </button>
+                    <button type="submit" class="px-4 py-2 rounded-xl font-black bg-gradient-to-r from-[#205493] to-[#112e51] hover:from-[#1b467a] hover:to-[#0c2440] text-white shadow-md transition-all cursor-pointer">
+                        حفظ التاريخ وتحديث الحساب
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openEditDateModal(soldierId, soldierName, currentDate) {
+        const modal = document.getElementById('edit-return-date-modal');
+        const form = document.getElementById('edit-date-form');
+        const nameSpan = document.getElementById('modal-soldier-name');
+        const dateInput = document.getElementById('modal-current-date');
+
+        nameSpan.innerText = soldierName;
+        dateInput.value = currentDate;
+        
+        // إعداد استدعاء HTMX المباشر
+        form.setAttribute('hx-post', '/Roster/UpdateReturnDate/' + soldierId);
+        form.setAttribute('hx-target', '#soldier-row-' + soldierId);
+        form.setAttribute('hx-swap', 'outerHTML');
+        htmx.process(form);
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeEditDateModal() {
+        const modal = document.getElementById('edit-return-date-modal');
+        modal.classList.add('hidden');
+    }
+
+    document.body.addEventListener('htmx:afterRequest', function (evt) {
+        if (evt.detail.successful && evt.detail.elt && evt.detail.elt.id === 'edit-date-form') {
+            closeEditDateModal();
+        }
+    });
+</script>

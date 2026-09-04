@@ -1,0 +1,199 @@
+@model List<MilitaryRoster.ViewModels.RosterItemViewModel>
+
+@{
+    ViewData["Title"] = "جدول الإجازات (Leave Schedule)";
+    var types = ViewBag.Types as List<MilitaryRoster.Models.Entities.SoldierType> ?? new();
+    var selectedType = ViewBag.SelectedType as int?;
+    var viewMode = ViewBag.ViewMode as string ?? "list";
+}
+
+<div class="space-y-6" x-data="{ currentMode: '@viewMode' }">
+    <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 text-indigo-400 text-xs font-bold mb-1">
+                <span> الرؤية الزمنية والتقويم الرسمي للإجازات</span>
+            </div>
+            <h2 class="text-xl font-black text-[#0d1f36]">جدول ومخطط إجازات الموظفين (Leave Schedule)</h2>
+            <p class="text-xs text-slate-500 mt-1">استعراض حركة إجازات الموظفين بنظام التقويم (Calendar View) أو القائمة المجدولة (List View).</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button type="button" @@click="currentMode = 'list'"
+                    :class="currentMode === 'list' ? 'bg-[#205493] text-white shadow-sm' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'"
+                    class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                عرض القائمة (List)
+            </button>
+            <button type="button" @@click="currentMode = 'calendar'"
+                    :class="currentMode === 'calendar' ? 'bg-[#205493] text-white shadow-sm' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'"
+                    class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                عرض التقويم (Calendar)
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white border border-slate-200 p-4 rounded-xl flex items-center gap-3">
+        <form method="get" action="/LeaveSchedule" class="flex items-center gap-3 text-xs">
+            <select name="soldierTypeId" onchange="this.form.submit()" class="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900">
+                <option value="">جميع أنواع الموظفين</option>
+                @foreach (var t in types)
+                {
+                    <option value="@t.Id" selected="@(selectedType == t.Id)">@t.Name</option>
+                }
+            </select>
+        </form>
+    </div>
+
+    <!-- List View -->
+    <div x-show="currentMode === 'list'" class="bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-right text-xs">
+                <thead>
+                    <tr class="bg-[#112e51] text-white text-[11px] font-bold border-b border-[#0d1f36]">
+                        <th class="py-3 px-4">اسم الموظف</th>
+                        <th class="py-3 px-4">النوع</th>
+                        <th class="py-3 px-4">موعد النزول المخطط</th>
+                        <th class="py-3 px-4">موعد العودة المخطط</th>
+                        <th class="py-3 px-4">أيام الإجازة</th>
+                        <th class="py-3 px-4">الموقف الحالي</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 font-mono">
+                    @foreach (var s in Model)
+                    {
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="py-3 px-4 font-sans font-bold text-slate-900 text-sm">@s.FullName</td>
+                            <td class="py-3 px-4 font-sans text-slate-700">@s.SoldierTypeName</td>
+                            <td class="py-3 px-4 font-bold text-amber-700">@s.LeaveStartDate.ToArabic()</td>
+                            <td class="py-3 px-4 font-bold text-blue-700">@s.ExpectedReturnDate.ToArabic()</td>
+                            <td class="py-3 px-4 text-slate-700">@s.LeaveDays يوم</td>
+                            <td class="py-3 px-4 font-sans">
+                                <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300 shadow-sm">
+                                    @s.StatusName
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Calendar View -->
+    <div x-show="currentMode === 'calendar'" class="bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+        @{
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var year = today.Year;
+            var month = today.Month;
+            var daysInMonth = DateTime.DaysInMonth(year, month);
+            // Day of week for the 1st of month (0=Sun, 6=Sat) — Arabic calendar starts Saturday
+            // We use Saturday=0, Sunday=1, ..., Friday=6 order
+            // DayOfWeek: Sunday=0,Monday=1,...,Saturday=6
+            // We want: Sat=0, Sun=1, Mon=2, Tue=3, Wed=4, Thu=5, Fri=6
+            var firstDayDow = (int)new DateTime(year, month, 1).DayOfWeek; // 0=Sun..6=Sat
+            int offset = firstDayDow == 0 ? 1 : (firstDayDow == 6 ? 0 : firstDayDow + 1);
+            // offset = number of blank cells before day 1
+
+            var arabicMonths = new[] {"","يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"};
+        }
+
+        <!-- Calendar Header -->
+        <div class="bg-[#112e51] text-white px-6 py-4 flex items-center justify-between">
+            <div class="text-sm font-black">@arabicMonths[month] @year</div>
+            <div class="text-xs text-slate-300 font-mono">
+                @Model.Count موظف مجدول
+            </div>
+        </div>
+
+        <!-- Day Labels -->
+        <div class="grid grid-cols-7 bg-slate-100 border-b border-slate-200">
+            @foreach (var dayName in new[] { "السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة" })
+            {
+                <div class="py-2.5 text-center text-[11px] font-black text-slate-600 uppercase tracking-wide">@dayName</div>
+            }
+        </div>
+
+        <!-- Calendar Grid -->
+        <div class="grid grid-cols-7 border-r border-t border-slate-200">
+            @* Empty cells before day 1 *@
+            @for (int i = 0; i < offset; i++)
+            {
+                <div class="min-h-[100px] p-2 bg-slate-50/50 border-l border-b border-slate-200"></div>
+            }
+
+            @* Day cells *@
+            @for (int day = 1; day <= daysInMonth; day++)
+            {
+                var cellDate = new DateOnly(year, month, day);
+                var dayLeaves  = Model.Where(s => s.LeaveStartDate == cellDate).ToList();
+                var dayReturns = Model.Where(s => s.ExpectedReturnDate == cellDate).ToList();
+                var onLeave    = Model.Where(s => s.LeaveStartDate < cellDate && s.ExpectedReturnDate > cellDate).ToList();
+                bool isToday   = cellDate == today;
+                bool hasEvents = dayLeaves.Any() || dayReturns.Any();
+
+                <div class="min-h-[100px] p-2 border-l border-b border-slate-200 flex flex-col @(isToday ? "bg-amber-50/60" : hasEvents ? "bg-white" : "bg-white") hover:bg-slate-50 transition-colors">
+                    <!-- Day Number -->
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="@(isToday ? "w-6 h-6 rounded-full bg-[#205493] text-white flex items-center justify-center text-[11px] font-black" : "text-[12px] font-bold " + (hasEvents ? "text-slate-800" : "text-slate-400"))">
+                            @day
+                        </span>
+                        @if (onLeave.Count > 0)
+                        {
+                            <span class="text-[9px] text-purple-600 font-bold bg-purple-50 px-1 rounded">@onLeave.Count في إجازة</span>
+                        }
+                    </div>
+
+                    <!-- Events -->
+                    <div class="space-y-1 mt-auto">
+                        @if (dayLeaves.Any())
+                        {
+                            <div class="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300 truncate leading-tight"
+                                 title="@string.Join("، ", dayLeaves.Select(x => x.FullName))">
+                                ↓ نزول @dayLeaves.Count موظف
+                                @if (dayLeaves.Count == 1)
+                                {
+                                    <span class="block text-[8px] font-bold text-amber-700 truncate">@dayLeaves[0].FullName</span>
+                                }
+                            </div>
+                        }
+                        @if (dayReturns.Any())
+                        {
+                            <div class="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-blue-100 text-blue-900 border border-blue-300 truncate leading-tight"
+                                 title="@string.Join("، ", dayReturns.Select(x => x.FullName))">
+                                ↑ عودة @dayReturns.Count موظف
+                                @if (dayReturns.Count == 1)
+                                {
+                                    <span class="block text-[8px] font-bold text-blue-700 truncate">@dayReturns[0].FullName</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            @* Fill remaining cells to complete last row *@
+            @{
+                int totalCells = offset + daysInMonth;
+                int remainder = totalCells % 7;
+                int trailing = remainder == 0 ? 0 : 7 - remainder;
+            }
+            @for (int i = 0; i < trailing; i++)
+            {
+                <div class="min-h-[100px] p-2 bg-slate-50/50 border-l border-b border-slate-200"></div>
+            }
+        </div>
+
+        <!-- Calendar Legend -->
+        <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex items-center gap-4 text-[11px]">
+            <span class="flex items-center gap-1.5 font-bold text-amber-900">
+                <span class="w-3 h-3 rounded bg-amber-300 inline-block"></span> نزول موظف
+            </span>
+            <span class="flex items-center gap-1.5 font-bold text-blue-900">
+                <span class="w-3 h-3 rounded bg-blue-300 inline-block"></span> عودة موظف
+            </span>
+            <span class="flex items-center gap-1.5 font-bold text-purple-700">
+                <span class="w-3 h-3 rounded bg-purple-200 inline-block"></span> في الإجازة (عبور)
+            </span>
+        </div>
+    </div>
+</div>

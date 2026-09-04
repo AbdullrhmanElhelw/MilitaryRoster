@@ -1,0 +1,48 @@
+@model MilitaryRoster.ViewModels.PagedList<MilitaryRoster.ViewModels.RosterItemViewModel>
+
+<div id="roster-table-body-container">
+    <div class="overflow-x-auto">
+        <table class="w-full text-center border-collapse text-xs select-text">
+            <thead>
+                <tr class="bg-[#112e51] text-white text-[11px] font-bold uppercase tracking-wider border-b border-[#0d1f36]">
+                    <th class="py-3.5 px-3 text-right">اسم الموظف</th>
+                    <th class="py-3.5 px-3">التصنيف</th>
+                    <th class="py-3.5 px-3">انتهاء الخدمة</th>
+                    <th class="py-3.5 px-3">أيام العمل</th>
+                    <th class="py-3.5 px-3">أيام الإجازة</th>
+                    <th class="py-3.5 px-3">ميعاد العودة (الاستلام)</th>
+                    <th class="py-3.5 px-2 text-rose-300 font-bold border-x border-[#1a3a60]">خصم (أيام)</th>
+                    <th class="py-3.5 px-2 text-emerald-300 font-bold border-l border-[#1a3a60]">منحة (أيام)</th>
+                    <th class="py-3.5 px-3 text-amber-300 font-bold">ميعاد النزول القادم</th>
+                    <th class="py-3.5 px-3 text-blue-200 font-bold">ميعاد العودة القادم</th>
+                    <th class="py-3.5 px-3">الإجراء المباشر</th>
+                </tr>
+            </thead>
+            <tbody id="roster-table-body" class="divide-y divide-slate-200 bg-white">
+                @if (!Model.Items.Any())
+                {
+                    <tr>
+                        <td colspan="11" class="py-8 text-center text-slate-500">
+                            <div class="flex flex-col items-center justify-center gap-2">
+                                <svg class="w-8 h-8 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>لا توجد بيانات موظفين مطابقة لخيارات البحث والفلترة</span>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var item in Model.Items)
+                    {
+                        @await Html.PartialAsync("_SoldierRow", item)
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination Footer -->
+    @await Html.PartialAsync("_Pagination", Model)
+</div>

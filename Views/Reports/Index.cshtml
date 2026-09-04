@@ -1,0 +1,92 @@
+@model List<MilitaryRoster.ViewModels.RosterItemViewModel>
+
+@{
+    ViewData["Title"] = "التقارير  (Reports)";
+    var reportType = ViewBag.ReportType as string ?? "on_leave";
+    var types = ViewBag.Types as List<MilitaryRoster.Models.Entities.SoldierType> ?? new();
+    var selectedType = ViewBag.SelectedType as int?;
+}
+
+<div class="space-y-6">
+    <!-- Top Report Header & Export Actions -->
+    <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 text-rose-400 text-xs font-bold mb-1">
+                <span> كشوفات وتقارير إجازات الموظفين الرسمية</span>
+            </div>
+            <h2 class="text-xl font-black text-[#0d1f36]">التقارير والإحصائيات الرسمية</h2>
+            <p class="text-xs text-slate-500 mt-1">طباعة وتصدير كشوفات النزول والعودة والمتأخرين عن العودة وسجلات الانضباط.</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button onclick="window.print()" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 shadow-sm transition-colors flex items-center gap-1.5">
+                <span> طباعة الكشف</span>
+            </button>
+            <button onclick="alert('تم تجهيز وتصدير ملف Excel بنجاح')" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-700 hover:bg-emerald-600 text-white transition-colors flex items-center gap-1.5">
+                <span> تصدير Excel</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Report Type Tabs -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+        <a href="/Reports?reportType=on_leave" class="px-3.5 py-2 rounded-xl font-bold transition-colors @(reportType == "on_leave" ? "bg-[#205493] text-white shadow-sm" : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200")">
+            الموظفين في الإجازة
+        </a>
+        <a href="/Reports?reportType=leave_today" class="px-3.5 py-2 rounded-xl font-bold transition-colors @(reportType == "leave_today" ? "bg-[#205493] text-white shadow-sm" : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200")">
+            تقرير نزول اليوم
+        </a>
+        <a href="/Reports?reportType=eligible_tomorrow" class="px-3.5 py-2 rounded-xl font-bold transition-colors @(reportType == "eligible_tomorrow" ? "bg-[#205493] text-white shadow-sm" : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200")">
+            تقرير نزول غداً (البند)
+        </a>
+        <a href="/Reports?reportType=return_today" class="px-3.5 py-2 rounded-xl font-bold transition-colors @(reportType == "return_today" ? "bg-[#205493] text-white shadow-sm" : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200")">
+            تقرير عودة اليوم
+        </a>
+        <a href="/Reports?reportType=overdue" class="px-3.5 py-2 rounded-xl font-bold transition-colors @(reportType == "overdue" ? "bg-rose-600 text-slate-900 font-bold" : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200")">
+            تقرير المتأخرين عن العودة
+        </a>
+    </div>
+
+    <!-- Printable Report Table Container -->
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden p-4">
+        <div class="text-center py-3 border-b border-slate-200 mb-4">
+            <h3 class="font-black text-[#0d1f36] text-base">القوات المسلحة — كشف تمام إجازات الموظفين الرسمي</h3>
+            <p class="text-xs text-slate-500 mt-1">تاريخ الكشف: @DateTime.Today.ToArabic() — إجمالي الأفراد بالكشف: @Model.Count موظف</p>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-right text-xs">
+                <thead>
+                    <tr class="bg-[#112e51] text-white text-[11px] font-bold border-b border-[#0d1f36]">
+                        <th class="py-2.5 px-3">م</th>
+                        <th class="py-2.5 px-3">الاسم بالكامل</th>
+                        <th class="py-2.5 px-3">رقم الموظف</th>
+                        <th class="py-2.5 px-3">النوع</th>
+                        <th class="py-2.5 px-3">تاريخ النزول</th>
+                        <th class="py-2.5 px-3">تاريخ العودة</th>
+                        <th class="py-2.5 px-3">الحالة الرسمية</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200/80 font-mono">
+                    @for (int i = 0; i < Model.Count; i++)
+                    {
+                        var s = Model[i];
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-2 px-3 text-slate-500">@(i + 1)</td>
+                            <td class="py-2 px-3 font-sans font-bold text-slate-900">@s.FullName</td>
+                            <td class="py-2 px-3 text-slate-700">@s.MilitaryNumber</td>
+                            <td class="py-2 px-3 font-sans text-slate-700">@s.SoldierTypeName</td>
+                            <td class="py-2 px-3 text-amber-800">@s.LeaveStartDate.ToArabic()</td>
+                            <td class="py-2 px-3 text-blue-700">@s.ExpectedReturnDate.ToArabic()</td>
+                            <td class="py-2 px-3 font-sans">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                                    @s.StatusName
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,24 @@
+@model List<MilitaryRoster.ViewModels.RosterItemViewModel>
+
+<tbody id="roster-table-body" class="divide-y divide-slate-200/80">
+    @if (!Model.Any())
+    {
+        <tr>
+            <td colspan="11" class="py-8 text-center text-slate-500">
+                <div class="flex flex-col items-center justify-center gap-2">
+                    <svg class="w-8 h-8 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>لا توجد بيانات مطابقة لخيارات الفلترة الحالية</span>
+                </div>
+            </td>
+        </tr>
+    }
+    else
+    {
+        @foreach (var item in Model)
+        {
+            @await Html.PartialAsync("_SoldierRow", item)
+        }
+    }
+</tbody>

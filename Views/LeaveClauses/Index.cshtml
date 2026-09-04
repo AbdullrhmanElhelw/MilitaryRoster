@@ -1,0 +1,86 @@
+@model List<MilitaryRoster.ViewModels.RosterItemViewModel>
+
+@{
+    ViewData["Title"] = "شاشة البنود (Leave Clauses)";
+}
+
+<div class="space-y-6">
+    <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 text-amber-700 text-xs font-bold mb-1">
+                <span> اعتماد وتجهيز بنود النزول الرسمي</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-800 text-[10px] font-mono">@Model.Count موظف مستحق</span>
+            </div>
+            <h2 class="text-xl font-black text-[#0d1f36]">شاشة بنود نزول الموظفين (Leave Clauses)</h2>
+            <p class="text-xs text-slate-500 mt-1">تجهيز واعتماد كشف النزول للموظفين الذين موعد نزولهم غداً أو اليوم مع توثيق اسم المنفذ ووقت التنفيذ.</p>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 text-xs font-bold flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>@TempData["SuccessMessage"]</span>
+        </div>
+    }
+
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-right text-xs">
+                <thead>
+                    <tr class="bg-[#112e51] text-white text-[11px] font-bold border-b border-[#0d1f36]">
+                        <th class="py-3 px-4">اسم الموظف</th>
+                        <th class="py-3 px-4">رقم الموظف</th>
+                        <th class="py-3 px-4">النوع</th>
+                        <th class="py-3 px-4">تاريخ النزول</th>
+                        <th class="py-3 px-4">تاريخ العودة</th>
+                        <th class="py-3 px-4">حالة البند</th>
+                        <th class="py-3 px-4 text-center">الإجراء</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 font-mono">
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="py-8 text-center text-xs text-slate-500 font-sans">
+                                لا يوجد موظفين مستحقون لعمل البند في الوقت الحالي
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var s in Model)
+                        {
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4 font-sans font-bold text-[#0d1f36] text-sm">@s.FullName</td>
+                                <td class="py-3 px-4 text-slate-700">@s.MilitaryNumber</td>
+                                <td class="py-3 px-4 font-sans">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700">
+                                        @s.SoldierTypeName
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 font-bold text-amber-700">@s.LeaveStartDate.ToArabic()</td>
+                                <td class="py-3 px-4 text-slate-700">@s.ExpectedReturnDate.ToArabic()</td>
+                                <td class="py-3 px-4 font-sans">
+                                    <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                        مستحق النزول
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-center font-sans">
+                                    <form asp-action="Execute" method="post" class="inline">
+                                        <input type="hidden" name="SoldierId" value="@s.SoldierId" />
+                                        <button type="submit" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#205493] text-white hover:bg-[#112e51] shadow-md transition-all cursor-pointer">
+                                            عمل البند
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

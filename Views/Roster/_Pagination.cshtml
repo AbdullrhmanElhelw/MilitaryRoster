@@ -1,0 +1,44 @@
+@model MilitaryRoster.ViewModels.PagedList<MilitaryRoster.ViewModels.RosterItemViewModel>
+
+<div class="p-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+    <!-- Items Counter -->
+    <div class="text-slate-600 font-mono">
+        عرض <span class="font-bold text-[#0d1f36]">@Model.StartItemIndex - @Model.EndItemIndex</span> من إجمالي <span class="font-bold text-[#0d1f36]">@Model.TotalCount</span> موظف
+    </div>
+
+    <!-- Pagination Controls -->
+    <div class="flex items-center gap-1">
+        <!-- Previous Page Button -->
+        <button type="button"
+                @(Model.HasPreviousPage ? "" : "disabled")
+                hx-get="/Roster/Filter?page=@(Model.PageNumber - 1)&pageSize=@Model.PageSize"
+                hx-target="#roster-table-body-container"
+                hx-include="#filter-type, #filter-status, [name='search']"
+                class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold transition-colors shadow-sm cursor-pointer">
+            السابق
+        </button>
+
+        <!-- Page Numbers -->
+        @for (int i = 1; i <= Model.TotalPages; i++)
+        {
+            var p = i;
+            <button type="button"
+                    hx-get="/Roster/Filter?page=@p&pageSize=@Model.PageSize"
+                    hx-target="#roster-table-body-container"
+                    hx-include="#filter-type, #filter-status, [name='search']"
+                    class="px-3 py-1.5 rounded-lg font-mono font-bold transition-colors cursor-pointer @(Model.PageNumber == p ? "bg-[#205493] text-white shadow" : "bg-white border border-slate-300 text-slate-700 hover:bg-slate-100")">
+                @p
+            </button>
+        }
+
+        <!-- Next Page Button -->
+        <button type="button"
+                @(Model.HasNextPage ? "" : "disabled")
+                hx-get="/Roster/Filter?page=@(Model.PageNumber + 1)&pageSize=@Model.PageSize"
+                hx-target="#roster-table-body-container"
+                hx-include="#filter-type, #filter-status, [name='search']"
+                class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-bold transition-colors shadow-sm cursor-pointer">
+            التالي
+        </button>
+    </div>
+</div>

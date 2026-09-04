@@ -1,0 +1,836 @@
+@{
+    ViewData["Title"] = "لوحة التحكم الإدارية (Admin Control Center)";
+    var types = ViewBag.Types as List<MilitaryRoster.Models.Entities.SoldierType> ?? new();
+    var users = ViewBag.Users as List<MilitaryRoster.Models.Entities.AppUser> ?? new();
+    var pagedSoldiers = ViewBag.PagedSoldiers as MilitaryRoster.ViewModels.PagedList<MilitaryRoster.Models.Entities.Soldier> ?? new();
+    var kpi = ViewBag.Kpi as MilitaryRoster.ViewModels.KpiSummaryViewModel ?? new();
+    var redifs = ViewBag.RedifSoldiers as List<MilitaryRoster.Models.Entities.Soldier> ?? new();
+    var pendingNotes = ViewBag.PendingNotes as List<MilitaryRoster.Models.Entities.EmployeeNote> ?? new();
+    var pendingModifierRequests = ViewBag.PendingModifierRequests as List<MilitaryRoster.Models.Entities.ModifierRequest> ?? new();
+}
+
+<div x-data="{
+        currentTab: '@(ViewBag.ActiveTab ?? "analytics")',
+        showAddSoldierModal: false,
+        editModal: { open: false, id: 0, name: '', number: '', typeId: 1, endDate: '' },
+        setTab(tab) {
+            this.currentTab = tab;
+            const url = new URL(window.location);
+            url.searchParams.set('tab', tab);
+            window.history.replaceState({}, '', url);
+        }
+     }"
+     x-on:open-edit-soldier-modal.window="editModal.open = true; editModal.id = $event.detail.id; editModal.name = $event.detail.name; editModal.number = $event.detail.number; editModal.typeId = $event.detail.typeId; editModal.endDate = $event.detail.endDate;"
+     class="space-y-6">
+
+    <!-- Top Admin Header -->
+    <div class="bg-white border border-slate-200 p-6 rounded-2xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 text-amber-700 text-xs font-bold uppercase tracking-wider mb-1">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                <span>لوحة التحكم الإدارية المتكاملة</span>
+            </div>
+            <h2 class="text-xl font-black text-[#0d1f36]">مركز القيادة والتحكم بقواعد المنظومة</h2>
+            <p class="text-xs text-slate-500 mt-1">إدارة الموظفين، فئات وقواعد الخدمة، حسابات المشرفين، ومؤشرات الجاهزية.</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <span class="px-3 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                 المشرف: @User.Identity?.Name
+            </span>
+            <a href="/Roster" class="px-4 py-2 rounded-xl text-xs font-bold bg-[#205493] text-white hover:bg-[#1f4e79] text-white transition-colors flex items-center gap-1.5 shadow">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span>العودة لجدول الجدول</span>
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["AdminSuccess"] != null)
+    {
+        <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2">
+            <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>@TempData["AdminSuccess"]</span>
+        </div>
+    }
+
+    @if (TempData["AdminError"] != null)
+    {
+        <div class="p-4 rounded-xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-bold flex items-center gap-2 shadow-sm animate-pulse">
+            <svg class="w-5 h-5 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>@TempData["AdminError"]</span>
+        </div>
+    }
+
+    <!-- Modern Interactive Tabs Navigation -->
+    <div class="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
+        <button type="button"
+                @@click="setTab('analytics')"
+                :class="currentTab === 'analytics' ? 'bg-[#205493] text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'"
+                class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <span>لوحة المؤشرات والتحليلات</span>
+        </button>
+
+        <button type="button"
+                @@click="setTab('soldiers')"
+                :class="currentTab === 'soldiers' ? 'bg-[#205493] text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'"
+                class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <span>إدارة الموظفين (Soldiers)</span>
+        </button>
+
+        <button type="button"
+                @@click="setTab('categories')"
+                :class="currentTab === 'categories' ? 'bg-[#205493] text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'"
+                class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            <span>تصنيفات وقواعد الخدمة</span>
+        </button>
+
+        <button type="button"
+                @@click="setTab('users')"
+                :class="currentTab === 'users' ? 'bg-[#205493] text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'"
+                class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+            <span>المستخدمون والصلاحيات</span>
+        </button>
+
+        <button type="button"
+                @@click="setTab('notes')"
+                :class="currentTab === 'notes' ? 'bg-[#205493] text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'"
+                class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer relative">
+            <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+            </svg>
+            <span>اعتماد ملاحظات المشرفين</span>
+            @if (pendingNotes.Any())
+            {
+                <span class="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold font-mono">
+                    @pendingNotes.Count معلقة
+                </span>
+            }
+        </button>
+
+        <button type="button"
+                @@click="setTab('modifiers')"
+                :class="currentTab === 'modifiers' ? 'bg-[#205493] text-white shadow-md' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'"
+                class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer relative">
+            <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>اعتماد طلبات الخصم والمنح</span>
+            @if (pendingModifierRequests.Any())
+            {
+                <span class="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold font-mono animate-pulse">
+                    @pendingModifierRequests.Count معلقة
+                </span>
+            }
+        </button>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- TAB 1: ANALYTICS & OVERVIEW -->
+    <!-- ============================================== -->
+    <div x-show="currentTab === 'analytics'" class="space-y-6">
+        <!-- Quick KPIs Row -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                <div class="text-xs text-slate-500 font-bold mb-1">إجمالي قوة الموظفين</div>
+                <div class="text-2xl font-black text-[#0d1f36] font-mono">@kpi.TotalForce</div>
+                <div class="text-[11px] text-emerald-600 font-bold mt-1">جميع القطاعات مسجلة</div>
+            </div>
+            <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                <div class="text-xs text-slate-500 font-bold mb-1">متواجد بالخدمة</div>
+                <div class="text-2xl font-black text-emerald-700 font-mono">@kpi.OnDutyCount</div>
+                <div class="text-[11px] text-slate-500 font-bold mt-1">داخل مقر العمل</div>
+            </div>
+            <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                <div class="text-xs text-slate-500 font-bold mb-1">في إجازة حالياً</div>
+                <div class="text-2xl font-black text-purple-700 font-mono">@kpi.OnLeaveCount</div>
+                <div class="text-[11px] text-slate-500 font-bold mt-1">قيد الراحة المقررة</div>
+            </div>
+            <div class="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+                <div class="text-xs text-slate-500 font-bold mb-1">نزول غداً (عمل البند)</div>
+                <div class="text-2xl font-black text-amber-700 font-mono">@kpi.EligibleTomorrowCount</div>
+                <div class="text-[11px] text-amber-600 font-bold mt-1">جاهزون لكشف النزول</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Distribution by Category -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-5">
+                <h3 class="text-xs font-bold text-[#0d1f36] mb-4 flex items-center justify-between pb-2 border-b border-slate-200">
+                    <span>توزيع الموظفين حسب تصنيفات الخدمة</span>
+                    <span class="font-mono text-slate-500 text-[11px]">@types.Count تصنيفات</span>
+                </h3>
+                <div class="space-y-3">
+                    @foreach (var t in types)
+                    {
+                        var pct = kpi.TotalForce == 0 ? 0 : (t.Soldiers.Count * 100) / kpi.TotalForce;
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-bold text-slate-800">@t.Name</span>
+                                <span class="font-mono text-slate-500">@t.Soldiers.Count موظف (@pct%)</span>
+                            </div>
+                            <div class="w-full bg-slate-50 rounded-full h-2 overflow-hidden">
+                                <div class="bg-blue-600 text-white h-2 rounded-full" style="width: @pct%"></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Upcoming Demob (Redif Alert Table) -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-5">
+                <h3 class="text-xs font-bold text-rose-400 mb-4 flex items-center justify-between pb-2 border-b border-slate-200">
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                        <span>تنبيهات قرب التسريح (كشف الرديف القادم)</span>
+                    </span>
+                    <span class="text-[11px] font-mono text-slate-500">أقل من 90 يوم</span>
+                </h3>
+                <div class="overflow-y-auto max-h-56">
+                    <table class="w-full text-right text-xs">
+                        <thead>
+                            <tr class="text-slate-500 text-[10px] border-b border-slate-200">
+                                <th class="pb-1.5">اسم الموظف</th>
+                                <th class="pb-1.5">التصنيف</th>
+                                <th class="pb-1.5">تاريخ التسريح</th>
+                                <th class="pb-1.5 text-center">المتبقي</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200/60 font-mono">
+                            @foreach (var r in redifs)
+                            {
+                                int daysLeft = r.ServiceEndDate.DayNumber - DateOnly.FromDateTime(DateTime.Today).DayNumber;
+                                <tr>
+                                    <td class="py-2 text-slate-900 font-sans font-bold">@r.FullName</td>
+                                    <td class="py-2 text-slate-500 font-sans">@r.SoldierType.Name</td>
+                                    <td class="py-2 text-rose-700">@r.ServiceEndDate.ToArabic()</td>
+                                    <td class="py-2 text-center text-amber-700 font-bold">@daysLeft يوم</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- TAB 2: SOLDIERS MANAGEMENT (PAGINATED & FILTERED) -->
+    <!-- ============================================== -->
+    <div x-show="currentTab === 'soldiers'" class="space-y-4">
+        <!-- Soldiers Toolbar -->
+        <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2.5">
+                <!-- Search input -->
+                <div class="relative min-w-[240px]">
+                    <input type="text"
+                           id="admin-soldier-search"
+                           name="soldierSearch"
+                           placeholder="بحث باسم الموظف أو الرقم..."
+                           hx-get="/Admin/SoldiersTable"
+                           hx-trigger="keyup changed delay:300ms, search"
+                           hx-target="#admin-soldiers-table-container"
+                           hx-include="#admin-soldier-type"
+                           class="w-full pl-3 pr-8 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 placeholder-slate-500 focus:border-blue-500 focus:outline-none" />
+                    <svg class="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+
+                <!-- Category filter -->
+                <select id="admin-soldier-type"
+                        name="soldierTypeId"
+                        hx-get="/Admin/SoldiersTable"
+                        hx-trigger="change"
+                        hx-target="#admin-soldiers-table-container"
+                        hx-include="#admin-soldier-search"
+                        class="px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-800 focus:border-blue-500 focus:outline-none">
+                    <option value="">جميع التصنيفات</option>
+                    @foreach (var t in types)
+                    {
+                        <option value="@t.Id">@t.Name</option>
+                    }
+                </select>
+            </div>
+
+            <button type="button"
+                    @@click="showAddSoldierModal = true"
+                    class="px-4 py-2 rounded-xl text-xs font-bold bg-[#205493] text-white hover:bg-[#1f4e79] text-white shadow transition-all flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                <span>إضافة موظف جديد</span>
+            </button>
+        </div>
+
+        <!-- Soldiers Paginated Table Container -->
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+            @await Html.PartialAsync("_AdminSoldiersTable", pagedSoldiers)
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- TAB 3: CATEGORIES & RULES (DUTYDAYS 11, LEAVEDAYS 7/6) -->
+    <!-- ============================================== -->
+    <div x-show="currentTab === 'categories'" class="space-y-6">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-xl p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-200 mb-6 gap-3">
+                <div>
+                    <h3 class="text-base font-bold text-[#0d1f36] flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                        </svg>
+                        <span>قواعد حساب إجازات وتواجد الموظفين (Category Rules)</span>
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">تعديل أيام العمل (11) وأيام الإجازة (7 للمدير، 6 للسكرتارية) لكل فئة، أو إضافة فئة جديدة.</p>
+                </div>
+            </div>
+
+            <!-- Categories Grid Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                @foreach (var t in types)
+                {
+                    <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+                        <!-- Card Header & Delete Button -->
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                                <span class="font-bold text-[#0d1f36] text-sm">@t.Name</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold @(t.Soldiers.Count > 0 ? "bg-blue-50 text-blue-700 border border-blue-200" : "bg-slate-100 text-slate-500 border border-slate-200") font-mono">
+                                    @t.Soldiers.Count موظف
+                                </span>
+                                
+                                <form asp-action="DeleteType" asp-route-id="@t.Id" method="post" class="inline"
+                                      onsubmit="return confirm('هل أنت متأكد من رغبتك في حذف تصنيف (@t.Name)؟');">
+                                    <input type="hidden" name="returnTab" value="categories" />
+                                    <button type="submit" 
+                                            class="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 hover:text-rose-800 transition-colors"
+                                            title="حذف هذا التصنيف">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Edit Form -->
+                        <form asp-action="UpdateType" method="post" class="space-y-3">
+                            <input type="hidden" name="returnTab" value="categories" />
+                            <input type="hidden" name="id" value="@t.Id" />
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 mb-1">اسم التصنيف / الفئة</label>
+                                <input type="text" name="name" value="@t.Name" required
+                                       class="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-bold text-xs focus:bg-white focus:border-[#205493] focus:outline-none transition-colors" />
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-600 mb-1">أيام العمل (التواجد)</label>
+                                    <div class="relative">
+                                        <input type="number" name="dutyDays" value="@t.DutyDays" min="1" max="60" required
+                                               class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-mono text-xs focus:bg-white focus:border-[#205493] focus:outline-none transition-colors" />
+                                        <span class="absolute left-2.5 top-1.5 text-[10px] text-slate-400">يوم</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-600 mb-1">أيام الإجازة المقررة</label>
+                                    <div class="relative">
+                                        <input type="number" name="leaveDays" value="@t.LeaveDays" min="1" max="30" required
+                                               class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-mono text-xs focus:bg-white focus:border-[#205493] focus:outline-none transition-colors" />
+                                        <span class="absolute left-2.5 top-1.5 text-[10px] text-slate-400">يوم</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 mb-1">الوصف / ملاحظات</label>
+                                <input type="text" name="description" value="@t.Description" placeholder="مثال: دورة جداول معتمدة"
+                                       class="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs focus:bg-white focus:border-[#205493] focus:outline-none transition-colors" />
+                            </div>
+
+                            <button type="submit"
+                                    class="w-full py-2 rounded-xl text-xs font-bold bg-[#205493] text-white hover:bg-[#1f4e79] shadow-sm transition-all flex items-center justify-center gap-1.5 mt-2">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span>حفظ تعديلات التصنيف</span>
+                            </button>
+                        </form>
+                    </div>
+                }
+            </div>
+
+            <!-- Form to add new Category -->
+            <div class="mt-8 pt-6 border-t border-slate-200 bg-slate-50 p-5 rounded-2xl">
+                <h4 class="font-bold text-[#0d1f36] text-xs mb-3 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-[#205493]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>إضافة تصنيف وقاعدة خدمة جديدة</span>
+                </h4>
+                <form asp-action="CreateType" method="post" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+                    <input type="hidden" name="returnTab" value="categories" />
+                    <div>
+                        <label class="block text-slate-600 mb-1 text-[11px] font-bold">اسم التصنيف</label>
+                        <input type="text" name="name" required placeholder="مثال: شؤون إدارية"
+                               class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:border-[#205493] focus:outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-600 mb-1 text-[11px] font-bold">أيام العمل</label>
+                        <input type="number" name="dutyDays" value="11" min="1" max="60" required
+                               class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono focus:border-[#205493] focus:outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-600 mb-1 text-[11px] font-bold">أيام الإجازة</label>
+                        <input type="number" name="leaveDays" value="6" min="1" max="30" required
+                               class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono focus:border-[#205493] focus:outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-600 mb-1 text-[11px] font-bold">الوصف (اختياري)</label>
+                        <input type="text" name="description" placeholder="دورة إجازات منتظمة"
+                               class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:border-[#205493] focus:outline-none" />
+                    </div>
+                    <div class="flex items-end">
+                        <button type="submit"
+                                class="w-full py-2 px-4 rounded-xl font-bold bg-[#205493] text-white hover:bg-[#1f4e79] shadow transition-all flex items-center justify-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>إضافة التصنيف</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- TAB 4: USERS & ROLES -->
+    <!-- ============================================== -->
+    <div x-show="currentTab === 'users'" class="space-y-6">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-xl p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Users Table -->
+                <div class="lg:col-span-2 overflow-x-auto">
+                    <h3 class="text-xs font-bold text-[#0d1f36] mb-3 pb-2 border-b border-slate-200">قائمة المشرفين والموظفين المصرح لهم</h3>
+                    <table class="w-full text-right text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-[11px] font-bold border-b border-slate-200">
+                                <th class="py-2.5 px-3">الاسم بالكامل</th>
+                                <th class="py-2.5 px-3">اسم المستخدم</th>
+                                <th class="py-2.5 px-3">مستوى الصلاحية</th>
+                                <th class="py-2.5 px-3">الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 font-mono">
+                            @foreach (var u in users)
+                            {
+                                <tr class="hover:bg-slate-50">
+                                    <td class="py-2.5 px-3 font-sans font-bold text-slate-900">@u.FullName</td>
+                                    <td class="py-2.5 px-3 text-slate-700">@u.Username</td>
+                                    <td class="py-2.5 px-3 font-sans">
+                                        @if (u.Role == "Admin")
+                                        {
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                                                مدير النظام (Admin)
+                                            </span>
+                                        }
+                                        else if (u.Role == "Supervisor" || u.Role == "Officer" || u.Role == "Manager")
+                                        {
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                                مشرف (صف ضابط)
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                                موظف (Employee)
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="py-2.5 px-3 font-sans">
+                                        <span class="text-emerald-700 font-bold">مفعل</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Add User Form -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-5" x-data="{ userRole: 'Supervisor' }">
+                    <h4 class="font-bold text-[#0d1f36] text-xs mb-3 pb-2 border-b border-slate-200">إضافة مستخدم جديد</h4>
+                    <form asp-action="CreateUser" method="post" class="space-y-3 text-xs">
+                        <input type="hidden" name="returnTab" value="users" />
+                        <div>
+                            <label class="block text-slate-600 mb-1 text-[11px] font-bold">الاسم بالكامل</label>
+                            <input type="text" name="fullName" required placeholder="مثال: أحمد محمود"
+                                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:border-[#205493] focus:outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-slate-600 mb-1 text-[11px] font-bold">اسم المستخدم</label>
+                            <input type="text" name="username" required placeholder="مثال: supervisor2"
+                                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono text-xs focus:border-[#205493] focus:outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-slate-600 mb-1 text-[11px] font-bold">كلمة المرور</label>
+                            <input type="password" name="password" required placeholder="••••••••"
+                                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono text-xs focus:border-[#205493] focus:outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-slate-600 mb-1 text-[11px] font-bold">نوع الصلاحية (Role)</label>
+                            <select name="role" x-model="userRole"
+                                    class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:border-[#205493] focus:outline-none">
+                                <option value="Supervisor">مشرف / صف ضابط (تشغيل وإضافة ملاحظات)</option>
+                                <option value="Admin">مدير النظام (Admin - تحكم كامل واعتمادات)</option>
+                                <option value="Employee">موظف (بوابة الموظف الشخصية فقط)</option>
+                            </select>
+                        </div>
+
+                        <!-- Employee Link (Visible only when role is Employee) -->
+                        <div x-show="userRole === 'Employee'" class="p-3 bg-white border border-amber-300 rounded-xl space-y-1">
+                            <label class="block text-amber-900 mb-1 text-[11px] font-bold">ربط بحساب الموظف في الجداول</label>
+                            <select name="soldierId"
+                                    class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs focus:border-[#205493] focus:outline-none">
+                                <option value="">-- اختر الموظف لربط حسابه --</option>
+                                @foreach (var s in pagedSoldiers.Items)
+                                {
+                                    <option value="@s.Id">@s.FullName (@s.MilitaryNumber)</option>
+                                }
+                            </select>
+                            <p class="text-[10px] text-slate-400">سيتمكن الموظف من متابعة إجازاته وملاحظاته المعتمدة فقط.</p>
+                        </div>
+
+                        <button type="submit"
+                                class="w-full py-2.5 rounded-xl font-bold bg-[#205493] text-white hover:bg-[#1f4e79] shadow transition-colors mt-2 flex items-center justify-center gap-2">
+                            <span>إنشاء الحساب وتفعيل الصلاحية</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- TAB 5: PENDING NOTES & APPROVALS -->
+    <!-- ============================================== -->
+    <div x-show="currentTab === 'notes'" class="space-y-6">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-xl p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 mb-6 gap-3">
+                <div>
+                    <h3 class="text-base font-bold text-[#0d1f36] flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>مركز اعتماد ومراجعة ملاحظات المشرفين (Supervisor Notes Approvals)</span>
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">الملاحظات التي يضيفها المشرفون (صف الضباط) على الموظفين لا تطبق ولا تظهر للموظف إلا بعد اعتماد مدير المنظومة هنا.</p>
+                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-bold @(pendingNotes.Any() ? "bg-rose-100 text-rose-800 border border-rose-300 font-mono" : "bg-emerald-100 text-emerald-800")">
+                    @pendingNotes.Count ملاحظات بانتظار الموافقة
+                </span>
+            </div>
+
+            @if (pendingNotes.Any())
+            {
+                <div class="space-y-4">
+                    @foreach (var note in pendingNotes)
+                    {
+                        <div class="bg-slate-50 border border-amber-200 rounded-2xl p-5 shadow-sm hover:shadow transition-shadow">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-200 mb-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-800 font-bold flex items-center justify-center text-sm border border-amber-300">
+                                        @(note.Soldier?.FullName.Substring(0, 1) ?? "م")
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <a href="/Soldiers/Details/@note.SoldierId" class="font-bold text-[#0d1f36] text-sm hover:text-blue-700 hover:underline">
+                                                @(note.Soldier?.FullName ?? "موظف")
+                                            </a>
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-200 text-slate-700">
+                                                رقم: @(note.Soldier?.MilitaryNumber ?? "-")
+                                            </span>
+                                        </div>
+                                        <div class="text-[11px] text-slate-500 mt-0.5">
+                                            بواسطة المشرف: <span class="font-bold text-slate-700">@note.AuthorFullName</span> (@note.AuthorUsername)
+                                            • <span class="font-mono">@note.CreatedAt.ToArabic()</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-2 self-end md:self-auto">
+                                    <form asp-action="ApproveNote" asp-route-id="@note.Id" method="post" class="inline">
+                                        <input type="hidden" name="returnTab" value="notes" />
+                                        <button type="submit"
+                                                class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow transition-all flex items-center gap-1.5 cursor-pointer">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            <span>اعتماد ونشر الملاحظة</span>
+                                        </button>
+                                    </form>
+
+                                    <form asp-action="RejectNote" asp-route-id="@note.Id" method="post" class="inline"
+                                          onsubmit="return confirm('هل أنت متأكد من رغبتك في رفض هذه الملاحظة؟');">
+                                        <input type="hidden" name="returnTab" value="notes" />
+                                        <button type="submit"
+                                                class="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-300 transition-all flex items-center gap-1.5 cursor-pointer">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                            <span>رفض</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-800 font-medium leading-relaxed">
+                                @note.NoteText
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                    <svg class="w-12 h-12 text-emerald-500 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h4 class="font-bold text-slate-700 text-sm">لا توجد ملاحظات معلقة بانتظار الاعتماد</h4>
+                    <p class="text-xs text-slate-400 mt-1">جميع الملاحظات الواردة من المشرفين تم اعتمادها ومراجعتها بالكامل.</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- TAB 6: MODIFIERS APPROVALS -->
+    <!-- ============================================== -->
+    <div id="modifiers-section" x-show="currentTab === 'modifiers'" class="space-y-6">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-xl p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 mb-6 gap-3">
+                <div>
+                    <h3 class="text-base font-bold text-[#0d1f36] flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>مركز اعتماد ومراجعة طلبات الخصومات والمنح (Modifiers Approvals Center)</span>
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">طلبات الخصومات والمنح المقدمة من المشرفين لا يتم تطبيقها في الجدول إلا بعد مراجعة واعتماد مدير النظام (الأدمن) هنا.</p>
+                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-bold @(pendingModifierRequests.Any() ? "bg-amber-100 text-amber-800 border border-amber-300 font-mono animate-pulse" : "bg-emerald-100 text-emerald-800")">
+                    @pendingModifierRequests.Count طلبات بانتظار الموافقة
+                </span>
+            </div>
+
+            @if (pendingModifierRequests.Any())
+            {
+                <div class="space-y-4">
+                    @foreach (var req in pendingModifierRequests)
+                    {
+                        <div class="bg-slate-50 border border-amber-200 rounded-2xl p-5 shadow-sm hover:shadow transition-shadow">
+                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-200 mb-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl font-bold flex items-center justify-center text-sm border @(req.RequestType == "Bonus" ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-rose-100 text-rose-800 border-rose-300")">
+                                        @(req.RequestType == "Bonus" ? "🎁" : "⚠️")
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <a href="/Soldiers/Details/@req.SoldierId" class="font-bold text-[#0d1f36] text-sm hover:text-blue-700 hover:underline">
+                                                @(req.Soldier?.FullName ?? "موظف")
+                                            </a>
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-200 text-slate-700">
+                                                رقم: @(req.Soldier?.MilitaryNumber ?? "-")
+                                            </span>
+                                            <span class="px-2 py-0.5 rounded text-[10px] bg-slate-200 text-slate-700">
+                                                @(req.Soldier?.SoldierType?.Name ?? "")
+                                            </span>
+                                            @if (req.RequestType == "Bonus")
+                                            {
+                                                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 font-mono">
+                                                    منحة (+@req.Days يوم إجازة)
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 font-mono">
+                                                    خصم (+@req.Days يوم خدمة / تأخير نزول)
+                                                </span>
+                                            }
+                                        </div>
+                                        <div class="text-[11px] text-slate-500 mt-0.5">
+                                            مقدم الطلب: <span class="font-bold text-slate-700">@req.RequestedByFullName</span> (@req.RequestedByUsername)
+                                            • <span class="font-mono">@req.RequestedAt.ToArabic()</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-2 self-end md:self-auto">
+                                    <form asp-action="ApproveModifierRequest" asp-route-id="@req.Id" method="post" class="inline">
+                                        <input type="hidden" name="returnTab" value="modifiers" />
+                                        <button type="submit"
+                                                class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow transition-all flex items-center gap-1.5 cursor-pointer">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            <span>اعتماد وتطبيق فوري على الجدول</span>
+                                        </button>
+                                    </form>
+
+                                    <form asp-action="RejectModifierRequest" asp-route-id="@req.Id" method="post" class="inline"
+                                          onsubmit="return confirm('هل أنت متأكد من رغبتك في رفض هذا الطلب؟');">
+                                        <input type="hidden" name="returnTab" value="modifiers" />
+                                        <button type="submit"
+                                                class="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-300 transition-all flex items-center gap-1.5 cursor-pointer">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                            <span>رفض</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-800 font-medium leading-relaxed">
+                                <span class="font-bold text-slate-600 ml-1">مبرر الطلب:</span>
+                                @(string.IsNullOrWhiteSpace(req.Reason) ? "لم يتم ذكر مبرر." : req.Reason)
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                    <svg class="w-12 h-12 text-emerald-500 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h4 class="font-bold text-slate-700 text-sm">لا توجد طلبات خصم أو منح معلقة بانتظار الاعتماد</h4>
+                    <p class="text-xs text-slate-400 mt-1">جميع طلبات الخصومات والمنح الواردة من المشرفين تمت معالجتها بالكامل.</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Modal: Add New Soldier -->
+    <div x-show="showAddSoldierModal"
+         x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-slate-50/80 backdrop-blur-sm" @@click="showAddSoldierModal = false"></div>
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div class="relative w-full max-w-lg bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                    <h3 class="font-bold text-[#0d1f36] text-sm">إضافة موظف جديد للجدول</h3>
+                    <button @@click="showAddSoldierModal = false" class="text-slate-500 hover:text-white">✕</button>
+                </div>
+                <form asp-action="CreateSoldier" method="post" class="mt-4 space-y-3 text-xs"><input type="hidden" name="returnTab" value="soldiers" />
+                    <div>
+                        <label class="block text-slate-700 mb-1 font-semibold">اسم الموظف</label>
+                        <input type="text" name="FullName" required placeholder="مثال: حسام محمد السيد"
+                               class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:border-blue-500 focus:outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 mb-1 font-semibold">رقم الموظف</label>
+                        <input type="text" name="MilitaryNumber" required placeholder="مثال: 2023999"
+                               class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono focus:border-blue-500 focus:outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 mb-1 font-semibold">تصنيف الخدمة</label>
+                        <select name="SoldierTypeId" required
+                                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:border-blue-500 focus:outline-none">
+                            @foreach (var t in types)
+                            {
+                                <option value="@t.Id">@t.Name (@t.DutyDays عمل / @t.LeaveDays إجازة)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-slate-700 mb-1 font-semibold">تاريخ آخر عودة (استلام)</label>
+                            <input type="date" name="InitialReturnDate" value="@DateTime.Today.ToString("yyyy-MM-dd")" required
+                                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono focus:border-blue-500 focus:outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-slate-700 mb-1 font-semibold">تاريخ التسريح</label>
+                            <input type="date" name="ServiceEndDate" value="@DateTime.Today.AddMonths(12).ToString("yyyy-MM-dd")" required
+                                   class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono focus:border-blue-500 focus:outline-none" />
+                        </div>
+                    </div>
+                    <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
+                        <button type="button" @@click="showAddSoldierModal = false" class="px-3.5 py-1.5 rounded-lg bg-slate-100 text-slate-700">إلغاء</button>
+                        <button type="submit" class="px-4 py-1.5 rounded-lg font-bold bg-[#205493] text-white hover:bg-[#1f4e79] text-white">حفظ الموظف</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Existing Soldier -->
+    <div x-show="editModal.open"
+         x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-slate-50/80 backdrop-blur-sm" @@click="editModal.open = false"></div>
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div class="relative w-full max-w-lg bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                    <h3 class="font-bold text-[#0d1f36] text-sm">تعديل بيانات الموظف</h3>
+                    <button @@click="editModal.open = false" class="text-slate-500 hover:text-white">✕</button>
+                </div>
+                <form asp-action="UpdateSoldier" method="post" class="mt-4 space-y-3 text-xs"><input type="hidden" name="returnTab" value="soldiers" />
+                    <input type="hidden" name="id" :value="editModal.id" />
+                    <div>
+                        <label class="block text-slate-700 mb-1 font-semibold">اسم الموظف</label>
+                        <input type="text" name="fullName" x-model="editModal.name" required
+                               class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:border-blue-500 focus:outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 mb-1 font-semibold">رقم الموظف</label>
+                        <input type="text" name="militaryNumber" x-model="editModal.number" required
+                               class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono focus:border-blue-500 focus:outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 mb-1 font-semibold">تصنيف الخدمة</label>
+                        <select name="soldierTypeId" x-model="editModal.typeId" required
+                                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:border-blue-500 focus:outline-none">
+                            @foreach (var t in types)
+                            {
+                                <option value="@t.Id">@t.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 mb-1 font-semibold">تاريخ التسريح</label>
+                        <input type="date" name="serviceEndDate" x-model="editModal.endDate" required
+                               class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono focus:border-blue-500 focus:outline-none" />
+                    </div>
+                    <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
+                        <button type="button" @@click="editModal.open = false" class="px-3.5 py-1.5 rounded-lg bg-slate-100 text-slate-700">إلغاء</button>
+                        <button type="submit" class="px-4 py-1.5 rounded-lg font-bold bg-[#205493] text-white hover:bg-[#1f4e79] text-white">حفظ التعديلات</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

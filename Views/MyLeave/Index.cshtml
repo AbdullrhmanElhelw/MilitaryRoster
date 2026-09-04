@@ -1,0 +1,214 @@
+@model MilitaryRoster.ViewModels.SoldierDetailsViewModel
+@{
+    ViewData["Title"] = "بوابة الموظف الشخصية - متابعة الإجازات والملاحظات";
+    var approvedNotes = ViewBag.ApprovedNotes as List<MilitaryRoster.Models.Entities.EmployeeNote> ?? new();
+}
+
+<div class="space-y-6 max-w-5xl mx-auto">
+    <!-- Header Card -->
+    <div class="bg-gradient-to-r from-[#0d1f36] to-[#1a3a60] text-white p-6 sm:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-slate-700">
+        <div class="flex items-center gap-4">
+            <div class="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-2xl font-black text-amber-400 shadow-inner">
+                @(Model?.Soldier.FullName.Substring(0, 1) ?? "م")
+            </div>
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[11px] font-bold">بوابة الموظف الذاتية</span>
+                    <span class="text-xs text-slate-300 font-mono">رقم الموظف: @(Model?.Soldier.MilitaryNumber ?? "-")</span>
+                </div>
+                <h1 class="text-2xl font-black tracking-tight">أهلاً بك، @(Model?.Soldier.FullName ?? User.Identity?.Name)</h1>
+                <p class="text-xs text-slate-300 mt-1">تصنيف الخدمة: <span class="font-bold text-amber-300">@(Model?.Soldier.SoldierType.Name ?? "-")</span> (@(Model?.Soldier.SoldierType.DutyDays ?? 0) عمل / @(Model?.Soldier.SoldierType.LeaveDays ?? 0) إجازة)</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 self-end md:self-auto">
+            <form asp-controller="Account" asp-action="Logout" method="post">
+                <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-500/20 text-rose-200 border border-rose-400/30 hover:bg-rose-500/30 transition-all flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    <span>تسجيل الخروج</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    @if (Model == null)
+    {
+        <div class="p-6 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-sm font-bold text-center">
+            @(ViewBag.ErrorMessage ?? "حسابك غير مرتبط بملف موظف حتى الآن. يرجى التواصل مع إدارة المنظومة.")
+        </div>
+    }
+    else
+    {
+        var current = Model.CurrentStatus;
+
+        <!-- Current Status & Key Dates -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <!-- Main Status Card -->
+            <div class="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm md:col-span-2 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                        <div class="text-xs font-bold text-slate-500">الموقف اللحظي الحالي</div>
+                        <span class="px-3 py-1 rounded-full text-xs font-bold @(current.Status == MilitaryRoster.Models.Enums.SoldierDutyStatus.EligibleForLeave ? "bg-amber-100 text-amber-800 border border-amber-300" : current.Status == MilitaryRoster.Models.Enums.SoldierDutyStatus.OnLeave ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-blue-100 text-blue-800 border border-blue-300")">
+                            @current.StatusName
+                        </span>
+                    </div>
+
+                    <div class="text-xl font-black text-[#0d1f36] mb-1">
+                        @current.StatusDescription
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="flex justify-between text-xs text-slate-600 mb-1.5 font-bold">
+                            <span>نسبة اكتمال فترة التواجد</span>
+                            @if (current.CurrentDutyDayNumber.HasValue)
+                            {
+                                <span class="font-mono">اليوم @current.CurrentDutyDayNumber من @current.DutyDays يوم</span>
+                            }
+                            else
+                            {
+                                <span class="font-mono text-purple-700">@current.StatusName</span>
+                            }
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-3.5 overflow-hidden p-0.5 border border-slate-200">
+                            @{
+                                var pct = current.CurrentDutyDayNumber.HasValue
+                                    ? Math.Min(100, Math.Max(0, (int)Math.Round(((double)current.CurrentDutyDayNumber.Value / Math.Max(1, current.DutyDays)) * 100)))
+                                    : (current.Status == MilitaryRoster.Models.Enums.SoldierDutyStatus.OnLeave ? 100 : 0);
+                            }
+                            <div class="bg-gradient-to-l from-emerald-500 to-[#205493] h-full rounded-full transition-all duration-500" style="width: @(pct)%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-100">
+                    <div class="bg-amber-50/60 p-3.5 rounded-xl border border-amber-200/60">
+                        <div class="text-[11px] text-amber-800 font-bold mb-1">موعد النزول القادم</div>
+                        <div class="text-base font-black text-amber-900 font-mono">@current.LeaveStartDate.ToArabic()</div>
+                    </div>
+                    <div class="bg-blue-50/60 p-3.5 rounded-xl border border-blue-200/60">
+                        <div class="text-[11px] text-blue-800 font-bold mb-1">موعد العودة المخطط</div>
+                        <div class="text-base font-black text-blue-900 font-mono">@current.ExpectedReturnDate.ToArabic()</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fast Stats Sidebar -->
+            <div class="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm flex flex-col justify-between space-y-4">
+                <h3 class="text-xs font-bold text-[#0d1f36] pb-2 border-b border-slate-100">ملخص الخدمة</h3>
+                
+                <div class="space-y-3 text-xs">
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500">الدورة الحالية:</span>
+                        <span class="font-bold text-[#0d1f36] font-mono">دورة #@current.CycleNumber</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500">تاريخ آخر عودة:</span>
+                        <span class="font-bold text-slate-800 font-mono">@current.LastReturnDate.ToArabic()</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500">تاريخ إنهاء الخدمة:</span>
+                        <span class="font-bold text-rose-700 font-mono">@Model.Soldier.ServiceEndDate.ToArabic()</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500">إجمالي دوراتك:</span>
+                        <span class="font-bold text-emerald-700 font-mono">@Model.CycleHistory.Count دورة</span>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                    <div class="text-[10px] text-slate-500">الأيام المتبقية حتى النزول</div>
+                    <div class="text-2xl font-black text-amber-600 font-mono">@Math.Max(0, current.RemainingDays)</div>
+                    <div class="text-[10px] text-slate-400">يوم عمل متبقي</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Approved Notes from Supervisors / Admin -->
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                    </svg>
+                    <h3 class="font-bold text-sm text-[#0d1f36]">الملاحظات والتوجيهات المعتمدة بحقك</h3>
+                </div>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+                    @approvedNotes.Count معتمدة
+                </span>
+            </div>
+
+            @if (approvedNotes.Any())
+            {
+                <div class="space-y-3">
+                    @foreach (var note in approvedNotes)
+                    {
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
+                                        @(note.AuthorRole == "Admin" ? "مدير النظام" : "مشرف الوحدة")
+                                    </span>
+                                    <span class="text-xs font-bold text-slate-700">@note.AuthorFullName</span>
+                                </div>
+                                <span class="text-[11px] text-slate-400 font-mono">@note.CreatedAt.ToArabic()</span>
+                            </div>
+                            <p class="text-xs text-slate-800 leading-relaxed font-semibold">@note.NoteText</p>
+                            @if (!string.IsNullOrEmpty(note.ApprovedBy))
+                            {
+                                <div class="mt-2 text-[10px] text-emerald-700 flex items-center gap-1 font-bold">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    <span>معتمد رسمياً بواسطة: @note.ApprovedBy</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-6 text-xs text-slate-400">
+                    لا توجد ملاحظات أو توجيهات إدارية مسجلة بحقك حالياً.
+                </div>
+            }
+        </div>
+
+        <!-- History Cycles Table -->
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 overflow-hidden">
+            <h3 class="font-bold text-sm text-[#0d1f36] mb-3 pb-2 border-b border-slate-100 flex items-center justify-between">
+                <span>سجل دوراتك السابقة</span>
+                <span class="text-xs text-slate-400 font-mono">@Model.CycleHistory.Count دورة مسجلة</span>
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-right text-xs">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-600 text-[11px] font-bold border-b border-slate-200">
+                            <th class="py-2.5 px-3">الدورة</th>
+                            <th class="py-2.5 px-3">النزول المخطط</th>
+                            <th class="py-2.5 px-3">النزول الفعلي</th>
+                            <th class="py-2.5 px-3">العودة المخططة</th>
+                            <th class="py-2.5 px-3">العودة الفعلية</th>
+                            <th class="py-2.5 px-3">مدة الإجازة</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 font-mono">
+                        @foreach (var c in Model.CycleHistory)
+                        {
+                            <tr class="hover:bg-slate-50">
+                                <td class="py-2 px-3 text-amber-700 font-bold">دورة #@c.CycleNumber</td>
+                                <td class="py-2 px-3">@c.LeaveStartDate.ToArabic()</td>
+                                <td class="py-2 px-3 text-blue-700">@(c.ActualLeaveDate?.ToArabic() ?? "قيد الانتظار")</td>
+                                <td class="py-2 px-3">@c.ExpectedReturnDate.ToArabic()</td>
+                                <td class="py-2 px-3 text-emerald-700 font-bold">@(c.ActualReturnDate?.ToArabic() ?? "-")</td>
+                                <td class="py-2 px-3">@c.LeaveDaysSnapshot يوم</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

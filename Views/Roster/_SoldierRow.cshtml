@@ -1,0 +1,229 @@
+@model MilitaryRoster.ViewModels.RosterItemViewModel
+
+@{
+    // تلوين السطر وخلايا المواعيد بحسب موقف الموظف اليوم بنظام فاتح واضح جداً
+    string rowBgClass = "hover:bg-slate-50 transition-colors";
+    string statusBadgeClass = "bg-slate-100 text-slate-700 border-slate-200";
+
+    switch (Model.Status)
+    {
+        case MilitaryRoster.Models.Enums.SoldierDutyStatus.ReturnToday:
+            // عودة اليوم (أزرق هادئ وواضح)
+            rowBgClass = "bg-blue-50/70 hover:bg-blue-100/70 transition-colors border-r-4 border-r-blue-600";
+            statusBadgeClass = "bg-blue-100 text-blue-800 border-blue-200 font-bold";
+            break;
+
+        case MilitaryRoster.Models.Enums.SoldierDutyStatus.LeaveToday:
+            // نزول اليوم (أخضر زاهي وواضح)
+            rowBgClass = "bg-emerald-50/80 hover:bg-emerald-100/80 transition-colors border-r-4 border-r-emerald-600";
+            statusBadgeClass = "bg-emerald-100 text-emerald-800 border-emerald-200 font-bold";
+            break;
+
+        case MilitaryRoster.Models.Enums.SoldierDutyStatus.EligibleForLeave:
+            // نزول غداً (عنبري ذهبي)
+            rowBgClass = "bg-amber-50/70 hover:bg-amber-100/70 transition-colors border-r-4 border-r-amber-500";
+            statusBadgeClass = "bg-amber-100 text-amber-800 border-amber-200 font-bold";
+            break;
+
+        case MilitaryRoster.Models.Enums.SoldierDutyStatus.OverdueReturn:
+            // متأخر عن العودة (أحمر تحذيري خفيف مع حدود بارزة)
+            rowBgClass = "bg-rose-50/80 hover:bg-rose-100/80 transition-colors border-r-4 border-r-rose-600";
+            statusBadgeClass = "bg-rose-100 text-rose-800 border-rose-200 font-bold";
+            break;
+
+        case MilitaryRoster.Models.Enums.SoldierDutyStatus.OnLeave:
+            // في إجازة
+            rowBgClass = "bg-purple-50/50 hover:bg-purple-100/50 transition-colors";
+            statusBadgeClass = "bg-purple-100 text-purple-800 border-purple-200 font-bold";
+            break;
+
+        default:
+            // في الخدمة
+            rowBgClass = "hover:bg-slate-50 transition-colors";
+            statusBadgeClass = "bg-slate-100 text-slate-700 border-slate-200";
+            break;
+    }
+}
+
+<tr id="soldier-row-@Model.SoldierId" class="border-b border-slate-200 text-xs text-center font-mono @rowBgClass">
+    <!-- 1. اسم الموظف -->
+    <td class="py-3 px-3 text-right font-sans font-black text-slate-900 text-sm">
+        <div class="flex items-center gap-2">
+            <a href="/Soldiers/Details/@Model.SoldierId" class="text-blue-900 hover:text-[#205493] hover:underline transition-colors" title="عرض تفاصيل الموظف وسجل الملاحظات">
+                @Model.FullName
+            </a>
+            @if (Model.IsDemobSoon)
+            {
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200" title="تاريخ التسريح: @Model.ServiceEndDate.ToArabic()">
+                    رديف
+                </span>
+            }
+        </div>
+        @if (Model.HasPendingModifierRequest)
+        {
+            <div class="mt-1">
+                @if (User.IsInRole("Admin"))
+                {
+                    <a href="/Admin#modifiers-section" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition-colors shadow-sm animate-pulse" title="انقر للاعتماد أو الرفض في لوحة التحكم الإدارية">
+                        <span>⏳</span>
+                        <span>@Model.PendingModifierSummary</span>
+                        <span class="underline mr-1 font-sans text-[9px]">اعتماد</span>
+                    </a>
+                }
+                else
+                {
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-sm animate-pulse" title="@Model.PendingModifierSummary">
+                        <span>⏳</span>
+                        <span>@Model.PendingModifierSummary</span>
+                    </span>
+                }
+            </div>
+        }
+    </td>
+
+    <!-- 2. التصنيف -->
+    <td class="py-3 px-3 font-sans">
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold @(Model.SoldierTypeName.Contains("مدير") ? "bg-amber-100 text-amber-800 border border-amber-300" : "bg-blue-100 text-blue-800 border border-blue-200")">
+            @Model.SoldierTypeName
+        </span>
+    </td>
+
+    <!-- 3. انتهاء الخدمة -->
+    <td class="py-3 px-3 text-slate-700 font-bold font-mono">
+        @Model.ServiceEndDate.ToArabic()
+    </td>
+
+    <!-- 4. أيام العمل -->
+    <td class="py-3 px-3 font-black text-[#0d1f36] bg-slate-100/60 font-mono">
+        @Model.DutyDays
+    </td>
+
+    <!-- 5. أيام الإجازة -->
+    <td class="py-3 px-3 font-black text-amber-700 bg-slate-100/60 font-mono">
+        @Model.LeaveDays
+    </td>
+
+    <!-- 6. ميعاد العودة السابق / الاستلام -->
+    <td class="py-3 px-3 font-mono font-bold @(Model.Status == MilitaryRoster.Models.Enums.SoldierDutyStatus.ReturnToday ? "text-blue-800 bg-blue-100 font-black rounded-lg" : "text-slate-800")">
+        @Model.LastReturnDate.ToArabic()
+    </td>
+
+    <!-- 7. خصم (أيام) - زيادة أيام التواجد / تأخير النزول -->
+    <td class="py-2 px-2 bg-rose-50/40">
+        @if (User.IsInRole("Admin"))
+        {
+            <form hx-post="/Roster/UpdateModifiers/@Model.SoldierId"
+                  hx-trigger="change delay:200ms"
+                  hx-target="#soldier-row-@Model.SoldierId"
+                  hx-swap="outerHTML">
+                <input type="hidden" name="bonusDays" value="@Model.BonusDays" />
+                <input type="number"
+                       name="deductionDays"
+                       value="@Model.DeductionDays"
+                       min="0" max="30"
+                       class="w-12 px-1.5 py-1 text-center bg-white border border-rose-300 hover:border-rose-500 focus:border-rose-500 rounded-lg text-rose-700 font-mono font-bold text-xs focus:outline-none transition-colors shadow-sm"
+                       title="خصم أيام (يؤخر ميعاد النزول)" />
+            </form>
+        }
+        else
+        {
+            <div class="flex items-center justify-center">
+                <span class="px-2.5 py-1 rounded bg-white border border-rose-200 text-rose-700 font-mono font-bold text-xs shadow-sm" title="الخصم المطبق حالياً: @Model.DeductionDays يوم">
+                    @Model.DeductionDays
+                </span>
+            </div>
+        }
+    </td>
+
+    <!-- 8. منحة (أيام) - زيادة أيام الإجازة وتضاف على ميعاد الرجوع -->
+    <td class="py-2 px-2 bg-emerald-50/40">
+        @if (User.IsInRole("Admin"))
+        {
+            <form hx-post="/Roster/UpdateModifiers/@Model.SoldierId"
+                  hx-trigger="change delay:200ms"
+                  hx-target="#soldier-row-@Model.SoldierId"
+                  hx-swap="outerHTML">
+                <input type="hidden" name="deductionDays" value="@Model.DeductionDays" />
+                <input type="number"
+                       name="bonusDays"
+                       value="@Model.BonusDays"
+                       min="0" max="30"
+                       class="w-12 px-1.5 py-1 text-center bg-white border border-emerald-300 hover:border-emerald-500 focus:border-emerald-500 rounded-lg text-emerald-700 font-mono font-bold text-xs focus:outline-none transition-colors shadow-sm"
+                       title="منحة أيام إجازة (تضاف على ميعاد الرجوع)" />
+            </form>
+        }
+        else
+        {
+            <div class="flex items-center justify-center">
+                <span class="px-2.5 py-1 rounded bg-white border border-emerald-200 text-emerald-700 font-mono font-bold text-xs shadow-sm" title="المنحة المطبقة حالياً: @Model.BonusDays يوم">
+                    @Model.BonusDays
+                </span>
+            </div>
+        }
+    </td>
+
+    <!-- 9. ميعاد النزول القادم (مع تمييز نزول اليوم ونزول غداً) -->
+    <td class="py-3 px-3 font-mono font-bold @(Model.Status == MilitaryRoster.Models.Enums.SoldierDutyStatus.LeaveToday ? "text-emerald-800 bg-emerald-100 font-black rounded-lg ring-1 ring-emerald-400" : (Model.Status == MilitaryRoster.Models.Enums.SoldierDutyStatus.EligibleForLeave ? "text-amber-900 bg-amber-100 font-black rounded-lg ring-1 ring-amber-400" : "text-slate-900"))">
+        <div class="flex flex-col items-center justify-center">
+            <span class="font-bold">@Model.LeaveStartDate.ToArabic()</span>
+            @if (Model.Status == MilitaryRoster.Models.Enums.SoldierDutyStatus.LeaveToday)
+            {
+                <span class="text-[10px] text-emerald-800 font-sans font-black">نزول اليوم</span>
+            }
+            else if (Model.Status == MilitaryRoster.Models.Enums.SoldierDutyStatus.EligibleForLeave)
+            {
+                <span class="text-[10px] text-amber-900 font-sans font-black">نزول غداً</span>
+            }
+        </div>
+    </td>
+
+    <!-- 10. ميعاد العودة القادم (مع تمييز عودة اليوم أو المتأخر) -->
+    <td class="py-3 px-3 font-mono font-bold @(Model.Status == MilitaryRoster.Models.Enums.SoldierDutyStatus.ReturnToday ? "text-blue-800 bg-blue-100 font-black rounded-lg ring-1 ring-blue-400" : (Model.Status == MilitaryRoster.Models.Enums.SoldierDutyStatus.OverdueReturn ? "text-rose-800 bg-rose-100 font-black rounded-lg ring-1 ring-rose-400 animate-pulse" : "text-slate-900"))">
+        <div class="flex flex-col items-center justify-center">
+            <span class="font-bold">@Model.ExpectedReturnDate.ToArabic()</span>
+            @if (Model.Status == MilitaryRoster.Models.Enums.SoldierDutyStatus.ReturnToday)
+            {
+                <span class="text-[10px] text-blue-800 font-sans font-black">عودة اليوم</span>
+            }
+            else if (Model.Status == MilitaryRoster.Models.Enums.SoldierDutyStatus.OverdueReturn)
+            {
+                <span class="text-[10px] text-rose-800 font-sans font-black">متأخر عن العودة</span>
+            }
+        </div>
+    </td>
+
+    <!-- 11. الإجراءات المباشرة (نزول موظف + تعديل التاريخ / طلب منحة أو خصم) -->
+    <td class="py-2.5 px-3">
+        <div class="flex items-center justify-center gap-1.5 font-sans">
+            <!-- زر نزول موظف وترحيل الدورة -->
+            <button type="button"
+                    onclick="dispatchSoldier(@Model.SoldierId, '@Model.FullName')"
+                    class="w-24 py-1.5 px-2 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-[#205493] to-[#112e51] hover:from-[#1b467a] hover:to-[#0c2440] border border-blue-900 shadow-sm transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer">
+                <span>نزول موظف</span>
+            </button>
+
+            @if (!User.IsInRole("Admin"))
+            {
+                <!-- زر طلب منحة أو خصم للمشرف -->
+                <button type="button"
+                        onclick="openModifierModal(@Model.SoldierId, '@Model.FullName', @(Model.HasPendingModifierRequest ? "true" : "false"))"
+                        class="p-1.5 rounded-lg text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors shadow-sm cursor-pointer"
+                        title="طلب منحة أو خصم للموظف (بانتظار موافقة الأدمن)">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </button>
+            }
+
+            <!-- زر تعديل التاريخ يدوياً -->
+            <button type="button"
+                    onclick="openEditDateModal(@Model.SoldierId, '@Model.FullName', '@Model.LastReturnDate.ToArabic()')"
+                    class="p-1.5 rounded-lg text-slate-600 hover:text-amber-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition-colors shadow-sm cursor-pointer"
+                    title="تعديل تاريخ العودة يدوياً">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+            </button>
+        </div>
+    </td>
+</tr>

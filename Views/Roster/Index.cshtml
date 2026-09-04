@@ -1,0 +1,186 @@
+@model MilitaryRoster.ViewModels.RosterDashboardViewModel
+
+@{
+    ViewData["Title"] = "كشف وجداول الموظفين";
+}
+
+<!-- الرأس وشريط العمليات العلوي الفخم بتصميم فاتح أنيق -->
+<div class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+    <div class="flex items-center gap-3.5">
+        <div class="w-14 h-14 flex items-center justify-center p-1 bg-slate-50 border border-slate-200 rounded-xl shadow-inner">
+            <img src="/images/logo.png" alt="شعار المنظومة" class="w-full h-full object-contain filter drop-shadow" />
+        </div>
+        <div>
+            <h1 class="text-base sm:text-xl font-black text-[#0d1f36]">كشف وجداول إجازات الموظفين</h1>
+            <p class="text-xs text-amber-600 font-bold">المنظومة — منظومة التمام والجاهزية الرسمية</p>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+        <!-- زر تحديث جماعي للمستحقين للنزول -->
+        <form hx-post="/Roster/BatchDispatch"
+              hx-target="#roster-table-body-container"
+              hx-swap="outerHTML"
+              hx-confirm="هل تؤكد تنفيذ التحديث الجماعي (نزول كل المستحقين) وترحيل دوراتهم؟">
+            <button type="submit"
+                    class="py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-[#205493] to-[#112e51] hover:from-[#1b467a] hover:to-[#0c2440] border border-blue-900 shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer">
+                <svg class="w-4 h-4 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>تحديث للكل (اعتماد نزول المستحقين)</span>
+            </button>
+        </form>
+
+        <!-- زر الذهاب للوحة الإحصائيات -->
+        <a href="/Dashboard" class="py-2.5 px-3.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition-colors flex items-center gap-1.5 shadow-sm">
+            <span>لوحة الإحصائيات</span>
+        </a>
+    </div>
+</div>
+
+@if (User.IsInRole("Admin") && Model.PendingModifierRequestsCount > 0)
+{
+    <div class="mb-6 p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-lg shrink-0">
+                ⏳
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-amber-950">توجد طلبات خصم ومنح معلقة بحاجة لاعتمادك</h3>
+                <p class="text-xs text-amber-800">قام المشرفون برفع (@Model.PendingModifierRequestsCount) طلب خصم أو منحة جديدة للموظفين بانتظار موافقة الأدمن لتطبيقها على الجدول.</p>
+            </div>
+        </div>
+        <a href="/Admin#modifiers-section" class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow transition-all whitespace-nowrap">
+            مراجعة واعتماد الطلبات الآن ←
+        </a>
+    </div>
+}
+
+<!-- Main Table Container (Excel-like Sheet Layout) -->
+<div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden"
+     x-data="{ activeFilter: 'all' }">
+
+    <!-- Table Operations Toolbar -->
+    <div class="p-4 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        
+        <!-- Search & Category Filters -->
+        <div class="flex flex-wrap items-center gap-2.5">
+            <!-- Search Input with HTMX -->
+            <div class="relative min-w-[240px]">
+                <input type="text"
+                       name="search"
+                       placeholder="بحث باسم الموظف أو رقم الموظف..."
+                       hx-get="/Roster/Filter"
+                       hx-trigger="keyup changed delay:300ms, search"
+                       hx-target="#roster-table-body-container"
+                       hx-include="#filter-type, #filter-status"
+                       class="w-full pl-3 pr-8 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:border-[#205493] focus:ring-1 focus:ring-[#205493] focus:outline-none shadow-sm" />
+                <svg class="w-4 h-4 text-slate-500 absolute right-2.5 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </div>
+
+            <!-- Dropdown Filter by Category -->
+            <div>
+                <select id="filter-type"
+                        name="soldierTypeId"
+                        hx-get="/Roster/Filter"
+                        hx-trigger="change"
+                        hx-target="#roster-table-body-container"
+                        hx-include="[name='search'], #filter-status"
+                        class="px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-700 font-bold focus:border-[#205493] focus:outline-none shadow-sm">
+                    <option value="">جميع تصنيفات الموظفين</option>
+                    @foreach (var type in Model.AvailableTypes)
+                    {
+                        <option value="@type.Id">@type.Name</option>
+                    }
+                </select>
+            </div>
+
+            <input type="hidden" id="filter-status" name="status" value="" />
+
+            <!-- Quick Status Filter Pills مع تمييز الألوان الرسمية -->
+            <div class="flex items-center gap-1.5 bg-slate-200/70 p-1 rounded-xl border border-slate-300 text-xs overflow-x-auto">
+                <button type="button"
+                        @@click="activeFilter = 'all'; document.getElementById('filter-status').value = ''; htmx.ajax('GET', '/Roster/Filter', { target: '#roster-table-body-container', values: { soldierTypeId: document.getElementById('filter-type').value, search: document.querySelector('[name=\'search\']').value } })"
+                        :class="activeFilter === 'all' ? 'bg-[#205493] text-white font-black shadow' : 'bg-white text-slate-800 hover:bg-slate-100 border border-slate-200 font-bold'"
+                        class="px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap cursor-pointer">
+                    الكل
+                </button>
+                <button type="button"
+                        @@click="activeFilter = 'eligible'; document.getElementById('filter-status').value = '1'; htmx.ajax('GET', '/Roster/Filter?status=1', { target: '#roster-table-body-container', values: { soldierTypeId: document.getElementById('filter-type').value, search: document.querySelector('[name=\'search\']').value } })"
+                        :class="activeFilter === 'eligible' ? 'bg-amber-500 text-slate-950 font-black shadow' : 'bg-white text-amber-900 hover:bg-amber-50 border border-amber-200 font-bold'"
+                        class="px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap cursor-pointer">
+                     نزول غداً
+                </button>
+                <button type="button"
+                        @@click="activeFilter = 'leaveToday'; document.getElementById('filter-status').value = '2'; htmx.ajax('GET', '/Roster/Filter?status=2', { target: '#roster-table-body-container', values: { soldierTypeId: document.getElementById('filter-type').value, search: document.querySelector('[name=\'search\']').value } })"
+                        :class="activeFilter === 'leaveToday' ? 'bg-emerald-600 text-white font-black shadow' : 'bg-white text-emerald-900 hover:bg-emerald-50 border border-emerald-200 font-bold'"
+                        class="px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap cursor-pointer">
+                     نزول اليوم
+                </button>
+                <button type="button"
+                        @@click="activeFilter = 'returnToday'; document.getElementById('filter-status').value = '4'; htmx.ajax('GET', '/Roster/Filter?status=4', { target: '#roster-table-body-container', values: { soldierTypeId: document.getElementById('filter-type').value, search: document.querySelector('[name=\'search\']').value } })"
+                        :class="activeFilter === 'returnToday' ? 'bg-blue-600 text-white font-black shadow' : 'bg-white text-blue-900 hover:bg-blue-50 border border-blue-200 font-bold'"
+                        class="px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap cursor-pointer">
+                     عودة اليوم
+                </button>
+                <button type="button"
+                        @@click="activeFilter = 'overdue'; document.getElementById('filter-status').value = '5'; htmx.ajax('GET', '/Roster/Filter?status=5', { target: '#roster-table-body-container', values: { soldierTypeId: document.getElementById('filter-type').value, search: document.querySelector('[name=\'search\']').value } })"
+                        :class="activeFilter === 'overdue' ? 'bg-rose-600 text-white font-black shadow' : 'bg-white text-rose-900 hover:bg-rose-50 border border-rose-200 font-bold'"
+                        class="px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap cursor-pointer">
+                     متأخر عن العودة
+                </button>
+            </div>
+        </div>
+
+        <!-- دليل الألوان السريع للمستخدمين -->
+        <div class="flex items-center gap-1.5 text-[11px] font-sans">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold"><span class="w-2 h-2 rounded-full bg-emerald-600"></span> نزول اليوم</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 font-bold"><span class="w-2 h-2 rounded-full bg-amber-500"></span> نزول غداً</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 font-bold"><span class="w-2 h-2 rounded-full bg-blue-600"></span> عودة اليوم</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 font-bold"><span class="w-2 h-2 rounded-full bg-rose-600"></span> متأخر</span>
+        </div>
+    </div>
+
+    <!-- Table + Pagination Container -->
+    @await Html.PartialAsync("_RosterTableContent", Model.PagedItems)
+</div>
+
+<!-- Modal for manual return date edit -->
+@await Html.PartialAsync("_EditReturnDateModal")
+
+<!-- Modal for requesting modifiers (Bonus / Deduction) -->
+@await Html.PartialAsync("_ModifierRequestModal")
+
+<!-- سكربت إدارة النزول والتحديث الفوري -->
+<script>
+    async function dispatchSoldier(soldierId, soldierName) {
+        if (!confirm(`هل تؤكد اعتماد نزول الموظف ${soldierName} إلى الإجازة وترحيل الدورة القادمة تلقائياً؟`)) {
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('dispatchedBy', 'نوبتجي العمليات');
+
+            const response = await fetch(`/Roster/Dispatch/${soldierId}`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const newRowHtml = await response.text();
+                const existingRow = document.getElementById(`soldier-row-${soldierId}`);
+                if (existingRow) {
+                    existingRow.outerHTML = newRowHtml;
+                }
+            } else {
+                alert('حدث خطأ أثناء اعتماد نزول الموظف');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('تعذر الاتصال بالخادم، يرجى المحاولة مرة أخرى.');
+        }
+    }
+</script>

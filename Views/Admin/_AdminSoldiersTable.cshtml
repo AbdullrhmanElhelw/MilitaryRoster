@@ -1,0 +1,125 @@
+@model MilitaryRoster.ViewModels.PagedList<MilitaryRoster.Models.Entities.Soldier>
+
+<div id="admin-soldiers-table-container">
+    <div class="overflow-x-auto">
+        <table class="w-full text-right text-xs">
+            <thead>
+                <tr class="bg-slate-50 text-slate-500 text-[11px] font-bold border-b border-slate-200">
+                    <th class="py-3 px-3">م</th>
+                    <th class="py-3 px-3">اسم الموظف</th>
+                    <th class="py-3 px-3">رقم الموظف</th>
+                    <th class="py-3 px-3">نوع الموظف</th>
+                    <th class="py-3 px-3">تاريخ التسريح</th>
+                    <th class="py-3 px-3">آخر عودة</th>
+                    <th class="py-3 px-3">الدورة</th>
+                    <th class="py-3 px-3 text-center">الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+                @if (!Model.Items.Any())
+                {
+                    <tr>
+                        <td colspan="8" class="py-8 text-center text-slate-500 text-xs">
+                            لا يوجد موظفين مطابقون للبحث والفلترة
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @for (int i = 0; i < Model.Items.Count; i++)
+                    {
+                        var s = Model.Items[i];
+                        var currentCycle = s.CurrentCycle;
+                        bool isRedif = (s.ServiceEndDate.DayNumber - DateOnly.FromDateTime(DateTime.Today).DayNumber) <= 60;
+
+                        <tr class="hover:bg-slate-50 transition-colors font-mono">
+                            <td class="py-2.5 px-3 text-slate-500">@(Model.StartItemIndex + i)</td>
+                            <td class="py-2.5 px-3 font-sans font-bold text-slate-900 text-sm">
+                                <div class="flex items-center gap-1.5">
+                                    <span>@s.FullName</span>
+                                    @if (isRedif)
+                                    {
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                            رديف
+                                        </span>
+                                    }
+                                </div>
+                            </td>
+                            <td class="py-2.5 px-3 text-slate-700">@s.MilitaryNumber</td>
+                            <td class="py-2.5 px-3 font-sans">
+                                <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 border border-slate-300 text-slate-800 border border-slate-300">
+                                    @s.SoldierType.Name (@s.SoldierType.DutyDays/@s.SoldierType.LeaveDays)
+                                </span>
+                            </td>
+                            <td class="py-2.5 px-3 text-slate-800">@s.ServiceEndDate.ToArabic()</td>
+                            <td class="py-2.5 px-3 text-slate-700">@(currentCycle?.LastReturnDate.ToArabic() ?? "-")</td>
+                            <td class="py-2.5 px-3 text-amber-700 font-bold">دورة #@(s.CurrentCycle?.CycleNumber ?? 1)</td>
+                            <td class="py-2.5 px-3 text-center font-sans">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <!-- Edit Button -->
+                                    <button type="button"
+                                            @@click="$dispatch('open-edit-soldier-modal', { id: @s.Id, name: '@s.FullName', number: '@s.MilitaryNumber', typeId: @s.SoldierTypeId, endDate: '@s.ServiceEndDate.ToArabic()' })"
+                                            class="p-1 rounded bg-slate-100 border border-slate-300 text-amber-700 hover:bg-slate-200 hover:text-amber-800"
+                                            title="تعديل بيانات الموظف">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                        </svg>
+                                    </button>
+
+                                    <!-- Delete Form -->
+                                    <form asp-action="DeleteSoldier" asp-route-id="@s.Id" method="post"
+                                          onsubmit="return confirm('هل تؤكد حذف الموظف @s.FullName وسجلاته نهائياً من المنظومة؟');"
+                                          class="inline">
+                                        <button type="submit"
+                                                class="p-1 rounded bg-slate-100 border border-slate-300 text-rose-400 hover:bg-rose-500/20 hover:text-rose-700"
+                                                title="حذف الموظف">
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Admin Pagination Controls -->
+    <div class="p-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+        <div class="text-slate-500 font-mono">
+            عرض <span class="font-bold text-[#0d1f36]">@Model.StartItemIndex - @Model.EndItemIndex</span> من <span class="font-bold text-[#0d1f36]">@Model.TotalCount</span> موظف
+        </div>
+        <div class="flex items-center gap-1">
+            <button type="button"
+                    @(Model.HasPreviousPage ? "" : "disabled")
+                    hx-get="/Admin/SoldiersTable?soldierPage=@(Model.PageNumber - 1)&soldierPageSize=@Model.PageSize"
+                    hx-target="#admin-soldiers-table-container"
+                    hx-include="#admin-soldier-search, #admin-soldier-type"
+                    class="px-2.5 py-1 rounded bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed font-bold">
+                السابق
+            </button>
+            @for (int p = 1; p <= Model.TotalPages; p++)
+            {
+                var pageNum = p;
+                <button type="button"
+                        hx-get="/Admin/SoldiersTable?soldierPage=@pageNum&soldierPageSize=@Model.PageSize"
+                        hx-target="#admin-soldiers-table-container"
+                        hx-include="#admin-soldier-search, #admin-soldier-type"
+                        class="px-2.5 py-1 rounded font-mono font-bold @(Model.PageNumber == pageNum ? "bg-[#2e75b6] text-[#0d1f36]" : "bg-slate-100 border border-slate-300/80 text-slate-700 hover:bg-slate-200")">
+                    @pageNum
+                </button>
+            }
+            <button type="button"
+                    @(Model.HasNextPage ? "" : "disabled")
+                    hx-get="/Admin/SoldiersTable?soldierPage=@(Model.PageNumber + 1)&soldierPageSize=@Model.PageSize"
+                    hx-target="#admin-soldiers-table-container"
+                    hx-include="#admin-soldier-search, #admin-soldier-type"
+                    class="px-2.5 py-1 rounded bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed font-bold">
+                التالي
+            </button>
+        </div>
+    </div>
+</div>
